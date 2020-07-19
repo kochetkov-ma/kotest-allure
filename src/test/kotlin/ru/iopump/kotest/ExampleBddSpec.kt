@@ -30,10 +30,10 @@ class ExampleBddSpec : BehaviorSpec() {
                     step1()
                 }
                 Then("[PRJ-160] Nested step has been printed - $arg") {
-                    stepNested()
+                    stepException1()
                 }
                 And("Step 2 has been printed too [PRJ-1300] - $arg") {
-                    step2()
+                    stepException2()
                 }
             }
         }

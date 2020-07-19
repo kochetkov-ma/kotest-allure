@@ -18,7 +18,12 @@ internal fun stepNested() {
     println("Execute nested step")
 }
 
-@Step("Allure aspectj step throw exception")
-internal fun stepException() {
-    throw AssertionError("Step error")
+@Step("Allure aspectj step throw exception1")
+internal fun stepException1() {
+    throw AssertionError("Step error1")
+}
+
+@Step("Allure aspectj step throw exception2")
+internal fun stepException2() {
+    throw AssertionError("Step error2")
 }

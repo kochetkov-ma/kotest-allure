@@ -24,7 +24,7 @@ class ExampleStringSpec : StringSpec() {
                 step1()
                 step2()
                 if (it == "--1--") {
-                    stepException()
+                    stepException1()
                 }
             }
         }
