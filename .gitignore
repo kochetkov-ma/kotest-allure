@@ -1,6 +1,7 @@
 # Project exclude paths
-/.gradle/
+.gradle/
 .allure/
+allure-results/
 .idea/
-gradle/
+gradle/wrapper/
 build/
