@@ -14,6 +14,7 @@ import io.qameta.allure.model.Status
 import io.qameta.allure.model.StatusDetails
 import io.qameta.allure.util.ResultsUtils.*
 import org.junit.platform.commons.util.ExceptionUtils
+import org.opentest4j.TestAbortedException
 import org.slf4j.LoggerFactory.getLogger
 import ru.iopump.kotest.helper.AllureTestCase
 import ru.iopump.kotest.helper.AllureTestCaseProcessor
@@ -26,42 +27,48 @@ import io.qameta.allure.model.TestResult as AllureTestCaseResult
 
 const val ALLURE_RESULTS_DIR = "allure.results.directory"
 const val CLEAR_ALLURE_RESULTS_DIR = "allure.results.directory.clear"
+const val SKIP_ON_FAIL = "skip.on.fail"
+const val ALLURE_SLF4J_LOG = "allure.slf4j.log"
 
 @Suppress("unused")
 @AutoScan
 object IoPumpAllureListener : TestListener, ProjectListener {
-    private val log = getLogger(IoPumpAllureListener::class.java)
-    private val usedGlobalNames = mutableMapOf<String, Int>()
-    private val testCaseMap = TestCaseMap()
+    init {
+        val useSlf4j = getProperty(ALLURE_SLF4J_LOG, true.toString())!!.toBoolean()
+        if (useSlf4j) Allure.setLifecycle(Slf4jAllureLifecycle())
+    }
+
     override val name: String = "IoPumpAllureListener"
+    private val log = getLogger(IoPumpAllureListener::class.java)
+    private val skipOnFail = getProperty(SKIP_ON_FAIL, true.toString())!!.toBoolean()
+
+    private val usedGlobalNames = mutableMapOf<String, Int>()
+    private val rootTcFailMap = mutableMapOf<String, TestResult>()
+    private val testCaseMap = TestCaseMap()
 
     override suspend fun beforeProject() {
         if (getProperty(ALLURE_RESULTS_DIR).isNullOrBlank())
             setProperty(ALLURE_RESULTS_DIR, "./build/allure-results")
 
-        if (getProperty(CLEAR_ALLURE_RESULTS_DIR, "false")!!.toBoolean())
+        if (getProperty(CLEAR_ALLURE_RESULTS_DIR, false.toString())!!.toBoolean())
             Paths.get(getProperty(ALLURE_RESULTS_DIR, "./allure-results")).toFile().deleteRecursively()
     }
 
     override suspend fun beforeTest(testCase: TestCase) {
-        log.debug("Allure beforeTest $testCase")
+        log.debug("[ALLURE] beforeTest ${testCase.description.name}")
+
         val processor = AllureTestCaseProcessor(testCase)
-
         val allureTestCase = testCase.map().put(testCase)
-
         when {
             allureTestCase.isRoot -> startRootTestCase(allureTestCase, processor)
 
-            allureTestCase.refToNestedParent != null -> startNestedTestCase(
-                allureTestCase.refToNestedParent,
-                allureTestCase,
-                processor
-            )
+            allureTestCase.refToNestedParent != null -> {
+                startNestedTestCase(allureTestCase.refToNestedParent, allureTestCase, processor)
+            }
 
             allureTestCase.refToRoot != null -> {
                 val rootAllureTestCase = allureTestCase.refToRoot
                 if (allureTestCase.isNewIteration) startRootTestCase(rootAllureTestCase, processor)
-
                 processor.allLinks().toList().let { links ->
                     if (links.isNotEmpty())
                         allure().updateTestCase(rootAllureTestCase.uuid) {
@@ -71,14 +78,17 @@ object IoPumpAllureListener : TestListener, ProjectListener {
                 startNestedTestCase(rootAllureTestCase, allureTestCase, processor)
             }
 
-            else -> {
-                log.error("IoPumpAllureListener internal error. Cannot get refToRoot in nested test. Skip this test case")
-            }
+            else -> log.error("[ALLURE] Internal error. Cannot get refToRoot in nested test. Skip this test case")
         }
+        if (allureTestCase.refToRoot != null) checkAssume(allureTestCase.refToRoot.uuid)
     }
 
     override suspend fun afterTest(testCase: TestCase, result: TestResult) {
-        log.debug("Allure afterTest $testCase")
+        val resultInfo = listOfNotNull(result.status, result.reason, result.error)
+                .map { it.toString() }
+                .filterNot { it.isBlank() }.joinToString(" - ")
+        log.debug("[ALLURE] afterTest ${testCase.description.name} ($resultInfo)")
+
         val status = when (result.status) {
             TestStatus.Error -> Status.BROKEN
             TestStatus.Failure -> Status.FAILED
@@ -109,11 +119,14 @@ object IoPumpAllureListener : TestListener, ProjectListener {
         } else {
             val tc = testCase.map().getNested(testCase)
 
-            if (tc.refToRoot != null) allure().updateTestCase(tc.refToRoot.uuid) { it.updateStatus(status, details) }
+            if (tc.refToRoot != null && result.status != TestStatus.Success) {
+                rootTcFailMap[tc.refToRoot.uuid] = result
+                allure().updateTestCase(tc.refToRoot.uuid) { it.updateStatus(status, details) }
+            }
             if (tc.refToNestedParent != null) allure().updateStep(tc.refToNestedParent.uuid) {
                 it.updateStatus(
-                    status,
-                    details
+                        status,
+                        details
                 )
             }
 
@@ -123,6 +136,17 @@ object IoPumpAllureListener : TestListener, ProjectListener {
     }
 
     //// PRIVATE ////
+
+    private fun checkAssume(uuid: String) {
+        val result = rootTcFailMap[uuid]
+        if ((result?.status ?: TestStatus.Success) != TestStatus.Success && skipOnFail) {
+            val err = if (result?.error is TestAbortedException) result.error?.cause else result?.error
+            throw TestAbortedException(
+                    "Один из вложенных сценариев завершился неуспешно. Текущий сценарий будет отменен",
+                    err
+            )
+        }
+    }
 
     @Suppress("DEPRECATION")
     private fun AllureTestCaseResult.updateSpec(desc: Description, globalName: String) {
@@ -134,18 +158,12 @@ object IoPumpAllureListener : TestListener, ProjectListener {
 
     @Suppress("DEPRECATION")
     private fun ExecutableItem.updateStatus(status: Status, details: StatusDetails) {
-        if (status != Status.PASSED || this.status == null) this.status = status
-        if (details.message != null || this.statusDetails == null) this.updateStatusDetails(details)
-    }
-
-    @Suppress("DEPRECATION")
-    private fun ExecutableItem.updateStatusDetails(details: StatusDetails) {
-        val sd = this.statusDetails
-        if (sd == null) {
+        val needUpdate = this.status == null // если еще нет статуса
+                || this.status == Status.PASSED // если статус пройден
+                || this.status == Status.SKIPPED // если статус пропущен
+        if (needUpdate) {
+            this.status = status
             this.statusDetails = details
-        } else {
-            sd.message = if (sd.message == null) details.message else "${sd.message}\n${details.message}"
-            sd.trace = if (sd.trace == null) details.message else "${sd.trace}\n${details.trace}"
         }
     }
 

@@ -1,0 +1,34 @@
+name: Make Release / Publish to OSS
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print information
+        run: echo Current build = ${{ github.head_ref }}
+      - name: Deep checkout
+        uses: actions/checkout@v2
+      - name: Set up JDK
+        uses: actions/setup-java@v1
+        with:
+          java-version: '11'
+          java-package: jdk
+          architecture: x64
+      - name: Build and upload to OSS sonatype
+        uses: eskatos/gradle-command-action@v1
+        with:
+          gradle-version: current
+          arguments: '--info --stacktrace -Psigning.key="${{ secrets.GPG_SIGNING_KEY }}"
+        -Psigning.password=${{ secrets.GPG_SIGNING_PASSWORD }}
+        -PossrhUsername=kochetkov-ma
+        -PossrhPassword=${{ secrets.ossrhPassword }}
+        -x test
+        uploadArchives'
+      - name: Create GitHub release description
+        uses: release-drafter/release-drafter@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
