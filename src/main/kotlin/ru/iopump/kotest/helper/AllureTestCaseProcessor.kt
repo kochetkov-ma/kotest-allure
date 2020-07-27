@@ -13,7 +13,9 @@ import ru.iopump.kotest.annotation.KJiras
 import java.util.regex.Pattern
 import kotlin.reflect.full.findAnnotation
 
-val JIRA_PATTER: Pattern = Pattern.compile("\\[([a-zA-Z]+-\\d+)]")
+const val ALLURE_JIRA_PATTERN = "allure.jira.pattern"
+
+val JIRA_PATTER: Pattern = Pattern.compile(System.getProperty(ALLURE_JIRA_PATTERN, "\\[([a-zA-Z]+-\\d+)]"))
 
 internal class AllureTestCaseProcessor(private val testCase: TestCase) {
 
@@ -31,36 +33,36 @@ internal class AllureTestCaseProcessor(private val testCase: TestCase) {
             + jiraLinks()
             + jiraLink()
             + jiraLinksFromName()).asSequence().filterNotNull().filterNot { it.url.isNullOrBlank() }
-        .distinctBy { it.url }
-        .onEach { if (it.name.isBlank()) it.name = it.url }
-        .toSet()
+            .distinctBy { it.url }
+            .onEach { if (it.name.isBlank()) it.name = it.url }
+            .toSet()
 
     fun allDescriptions(): String? =
-        listOfNotNull(kDescription()).joinToString(separator = System.lineSeparator())
+            listOfNotNull(kDescription()).joinToString(separator = System.lineSeparator())
 
     //// PRIVATE ////
     private fun kDescription(): String? = testCase.spec::class.findAnnotation<KDescription>()?.value
 
     private fun issues(): Collection<Link> =
-        testCase.spec::class.findAnnotation<Issues>()?.value?.map { createLink(it) } ?: emptySet()
+            testCase.spec::class.findAnnotation<Issues>()?.value?.map { createLink(it) } ?: emptySet()
 
     private fun issue(): Link? = testCase.spec::class.findAnnotation<Issue>()?.let { createLink(it) }
 
     private fun links(): Collection<Link> =
-        testCase.spec::class.findAnnotation<Links>()?.value?.map { createLink(it) } ?: emptySet()
+            testCase.spec::class.findAnnotation<Links>()?.value?.map { createLink(it) } ?: emptySet()
 
     private fun link(): Link? = testCase.spec::class.findAnnotation<io.qameta.allure.Link>()?.let { createLink(it) }
 
     private fun tmsLinks(): Collection<Link> =
-        testCase.spec::class.findAnnotation<TmsLinks>()?.value?.let { getLinks(it.toSet()) } ?: emptySet()
+            testCase.spec::class.findAnnotation<TmsLinks>()?.value?.let { getLinks(it.toSet()) } ?: emptySet()
 
     private fun tmsLink(): Link? = testCase.spec::class.findAnnotation<TmsLink>()?.let { createLink(it) }
 
     private fun jiraLinks(): Collection<Link> =
-        testCase.spec::class.findAnnotation<KJiras>()?.value?.let { getLinks(it.toSet()) } ?: emptySet()
+            testCase.spec::class.findAnnotation<KJiras>()?.value?.let { getLinks(it.toSet()) } ?: emptySet()
 
     private fun jiraLink(): Collection<Link> =
-        testCase.spec::class.findAnnotation<KJira>()?.let { getLinks(it) } ?: emptySet()
+            testCase.spec::class.findAnnotation<KJira>()?.let { getLinks(it) } ?: emptySet()
 
     private fun jiraLinksFromName(): Collection<Link> {
         val matcher = JIRA_PATTER.matcher(testCase.description.fullName())

@@ -21,7 +21,8 @@ class Slf4jAllureLifecycle : AllureLifecycle() {
         } else {
             stream.bufferedReader().runCatching { readText() }.getOrElse { it.localizedMessage }
         }
-        log.debug("[ALLURE ATTACHMENT] $name $type [$fileExtension]\n{}", content)
+
+        log.debug("[ALLURE ATTACHMENT] $name $type [$fileExtension]\n$content")
         super.addAttachment(name, type, fileExtension, stream)
     }
 
