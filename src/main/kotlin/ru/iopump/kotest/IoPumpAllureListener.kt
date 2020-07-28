@@ -96,9 +96,10 @@ object IoPumpAllureListener : TestListener, ProjectListener {
             TestStatus.Success -> Status.PASSED
         }
 
-        val details = StatusDetails()
-        details.message = result.error?.message
-        if (result.error != null) details.trace = ExceptionUtils.readStackTrace(result.error)
+        val details = StatusDetails().apply {
+            message = result.error?.message
+            if (result.error != null) trace = ExceptionUtils.readStackTrace(result.error)
+        }
 
         if (testCase.isTopLevel()) {
             val rootTestCaseList = testCase.map().getRoot(testCase)
@@ -136,15 +137,11 @@ object IoPumpAllureListener : TestListener, ProjectListener {
     }
 
     //// PRIVATE ////
-
     private fun checkAssume(uuid: String) {
         val result = rootTcFailMap[uuid]
         if ((result?.status ?: TestStatus.Success) != TestStatus.Success && skipOnFail) {
             val err = if (result?.error is TestAbortedException) result.error?.cause else result?.error
-            throw TestAbortedException(
-                    "Один из вложенных сценариев завершился неуспешно. Текущий сценарий будет отменен",
-                    err
-            )
+            throw TestAbortedException("One of the nested test has failed. Current scenario will be skipped", err)
         }
     }
 
@@ -158,9 +155,9 @@ object IoPumpAllureListener : TestListener, ProjectListener {
 
     @Suppress("DEPRECATION")
     private fun ExecutableItem.updateStatus(status: Status, details: StatusDetails) {
-        val needUpdate = this.status == null // если еще нет статуса
-                || this.status == Status.PASSED // если статус пройден
-                || this.status == Status.SKIPPED // если статус пропущен
+        val needUpdate = this.status == null
+                || this.status == Status.PASSED
+                || this.status == Status.SKIPPED
         if (needUpdate) {
             this.status = status
             this.statusDetails = details
@@ -181,17 +178,17 @@ object IoPumpAllureListener : TestListener, ProjectListener {
         val rootKotestCase = rootAllureTestCase.testCase
 
         val tcLabels = listOfNotNull(
-            createSuiteLabel(rootKotestCase.description.spec().name.displayName()),
-            createThreadLabel(),
-            createHostLabel(),
-            createLanguageLabel("kotlin"),
-            createFrameworkLabel("kotest"),
-            createPackageLabel(rootKotestCase.spec::class.java.`package`.name),
-            prc.epic(),
-            prc.story(),
-            prc.feature(),
-            prc.severity(),
-            prc.owner()
+                createSuiteLabel(rootKotestCase.description.spec().name.displayName()),
+                createThreadLabel(),
+                createHostLabel(),
+                createLanguageLabel("kotlin"),
+                createFrameworkLabel("kotest"),
+                createPackageLabel(rootKotestCase.spec::class.java.`package`.name),
+                prc.epic(),
+                prc.story(),
+                prc.feature(),
+                prc.severity(),
+                prc.owner()
         )
 
         AllureTestCaseResult().apply {
@@ -206,7 +203,7 @@ object IoPumpAllureListener : TestListener, ProjectListener {
     }
 
     private fun safeId(description: Description): String =
-        description.id().replace('/', ' ').replace("[^\\sa-zA-Z0-9]".toRegex(), "")
+            description.id().replace('/', ' ').replace("[^\\sa-zA-Z0-9]".toRegex(), "")
 
     private fun TestCase.map() = testCaseMap
 

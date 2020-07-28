@@ -22,11 +22,12 @@ dependencies {
     // testImplementation "io.kotest:kotest-common-jvm:<version>"
 }
 ```
-Listener has annotation `@AutoScan`. It provides necessary `allure common libs` but doesn't offer Kotest dependency.
+Allure Listener has annotation `@AutoScan` that's why not necessary to enable this Listener explicitly.  
+Also, it provides necessary `allure common libs` but doesn't offer Kotest dependency.
 
 ### Results
-By default results were collected to `./build/allure-results`.
-You can override it by system property `-Dallure.results.directory=...`. 
+By default, results were collected to `./build/allure-results`.  
+You can override it by system property `-Dallure.results.directory=...`.  
 Or via gradle script:
 ```groovy
 test {
@@ -57,11 +58,10 @@ allure.link.jira.pattern=https://example.org/jira/{}
 ```  
 Code:
 ```kotlin
-@KDescription("""
-    This is multiline description.
-    It must be a new line
-""")
-class ExampleBddSpec : BehaviorSpec() 
+@KJiras(
+        value = [KJira("TTT-111"), KJira("TTT-000")]
+)
+class ExampleBddSpec : BehaviorSpec()
 ```
 
 ##### `KJiras`
@@ -78,7 +78,7 @@ class ExampleBddSpec : BehaviorSpec({
 `[PRJ-100]` consider as Jira link with key `PRJ-100` don't forget to define `allure.link.jira.pattern` in `allure.properties`
 
 ### All api features
-See main feature above
+See main feature above  
 WIP ...
 
 ### All features in generated reports

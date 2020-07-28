@@ -5,6 +5,8 @@ import io.kotest.data.forAll
 import io.kotest.data.row
 import io.qameta.allure.*
 import ru.iopump.kotest.annotation.KDescription
+import ru.iopump.kotest.annotation.KJira
+import ru.iopump.kotest.annotation.KJiras
 
 @Epic("Allure feature annotation on test class")
 @Feature("Behavior")
@@ -18,7 +20,10 @@ import ru.iopump.kotest.annotation.KDescription
 """
 )
 @Issues(
-    value = [Issue("TTT-666"), Issue("TTT-777")]
+        value = [Issue("TTT-666"), Issue("TTT-777")]
+)
+@KJiras(
+        value = [KJira("TTT-111"), KJira("TTT-000")]
 )
 class ExampleBddSpec : BehaviorSpec() {
 
