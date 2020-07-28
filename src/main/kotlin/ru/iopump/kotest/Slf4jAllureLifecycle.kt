@@ -4,6 +4,7 @@ import io.qameta.allure.AllureLifecycle
 import io.qameta.allure.model.StepResult
 import org.slf4j.LoggerFactory
 import java.io.InputStream
+import java.nio.charset.StandardCharsets.UTF_8
 
 class Slf4jAllureLifecycle : AllureLifecycle() {
     companion object {
@@ -16,14 +17,16 @@ class Slf4jAllureLifecycle : AllureLifecycle() {
     }
 
     override fun addAttachment(name: String?, type: String?, fileExtension: String?, stream: InputStream?) {
-        val content = if (stream == null) {
-            "empty"
+        if (!log.isDebugEnabled) {
+            super.addAttachment(name, type, fileExtension, stream)
         } else {
-            stream.bufferedReader().runCatching { readText() }.getOrElse { it.localizedMessage }
+            val byteArray = stream.use { io ->
+                io.runCatching { this?.readAllBytes() ?: "empty".toByteArray(UTF_8) }
+                        .getOrElse { it.localizedMessage.toByteArray(UTF_8) }
+            }
+            log.debug("[ALLURE ATTACHMENT] $name $type [$fileExtension]\n{}", byteArray.toString(UTF_8))
+            super.addAttachment(name, type, fileExtension, byteArray.inputStream())
         }
-
-        log.debug("[ALLURE ATTACHMENT] $name $type [$fileExtension]\n$content")
-        super.addAttachment(name, type, fileExtension, stream)
     }
 
     private fun toLog(stepResult: StepResult?) = if (stepResult == null) {
