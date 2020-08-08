@@ -116,7 +116,7 @@ There is a full setting table. All settings adjust by system variable:
 
 | Name                           | Description                                                    | Default                |
 |--------------------------------|----------------------------------------------------------------|------------------------|
-| allure.jira.pattern            | see [Links in test name][#links-in-test-name]                  | \\[([a-zA-Z]+-\\d+)]   |
+| allure.jira.pattern            | see [Links in test name](#links-in-test-name)                  | \\[([a-zA-Z]+-\\d+)]   |
 | allure.results.directory       | path to write results during the test                          | ./build/allure-results |
 | allure.results.directory.clear | clean result directory before whole test execution             | false                  |
 | skip.on.fail                   | skip follow nested (not root tests) scenarios or steps on fail | true                   |
