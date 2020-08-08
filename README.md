@@ -8,7 +8,7 @@ Extended Allure Listener for Kotest
 [![maven central](https://img.shields.io/maven-central/v/ru.iopump.kotest/kotest-allure)](http://search.maven.org/#search|ga|1|kotest-allure)
 
 # Quick Start
-
+[Sample project](https://github.com/kochetkov-ma/pump-samples/tree/master/kotest-allure-sample)
 ### Add dependencies
 ```groovy
 dependencies {
@@ -35,6 +35,21 @@ test {
     useJUnitPlatform()
 }
 ```
+### Reports
+Use gradle [allure plugin](https://github.com/allure-framework/allure-gradle) to generate report.
+```groovy
+plugins {
+    id "io.qameta.allure" version "$allurePluginVersion"
+}
+allure {
+    version = allureVersion
+    autoconfigure = false
+    aspectjweaver = true
+    aspectjVersion = aspectJVersion
+    resultsDir = file "$buildDir/allure-results"
+}
+``` 
+See [example](https://github.com/kochetkov-ma/pump-samples/tree/master/kotest-allure-sample) 
 ### API
 #### Annotations
 ##### `KDescription` 
@@ -77,18 +92,36 @@ class ExampleBddSpec : BehaviorSpec({
 ```
 `[PRJ-100]` consider as Jira link with key `PRJ-100` don't forget to define `allure.link.jira.pattern` in `allure.properties`
 
-### All api features
+### Other features
 See main feature above  
-WIP ...
 
-### All features in generated reports
+#### Intercepting all Allure messages
+Every `step` and `attachment` will be intercept and post to Sl4j logger by `ru.iopump.kotest.Slf4jAllureLifecycle` 
+`step` messages have an INFO level. `attachment` messages have an DEBUG level.  
+This feature enabled by default.  
+You may disable by system env `allure.slf4j.log`.
+
+#### Skip following nested scenarios on fail
+If Test Case has nested scenarios and any of them will fail then follows ones will fail too with exception `TestAbortedException`
+This feature enabled by default.  
+You may disable by system env `skip.on.fail`.
+
+#### Clean allure results on start
+Allure results directory specified by system env `allure.results.directory` will be removed on tet project start. 
+This feature disabled by default.  
+You may enable by system env `allure.results.directory.clear`.
 
 ### Settings
-There is a full settings table. All settings adjust by system variable:
+There is a full setting table. All settings adjust by system variable:
 
-| WIP | ... | 
-|-----|-----|
-|     |     |
+| Name                           | Description                                                    | Default                |
+|--------------------------------|----------------------------------------------------------------|------------------------|
+| allure.jira.pattern            | see [Links in test name][#links-in-test-name]                  | \\[([a-zA-Z]+-\\d+)]   |
+| allure.results.directory       | path to write results during the test                          | ./build/allure-results |
+| allure.results.directory.clear | clean result directory before whole test execution             | false                  |
+| skip.on.fail                   | skip follow nested (not root tests) scenarios or steps on fail | true                   |
+| allure.slf4j.log               | duplicate allure step and attachment messages to Slf4j Logger  | true                   |
 
 # Public report example
-See example generated report on [allure.iopump.ru](http://allure.iopump.ru/reports/kotest-allure)
+- See example generated report on [allure.iopump.ru](http://allure.iopump.ru/reports/kotest-allure)  
+- [Sample project](https://github.com/kochetkov-ma/pump-samples/tree/master/kotest-allure-sample)  
