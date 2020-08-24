@@ -65,7 +65,7 @@ internal class AllureTestCaseProcessor(private val testCase: TestCase) {
             testCase.spec::class.findAnnotation<KJira>()?.let { getLinks(it) } ?: emptySet()
 
     private fun jiraLinksFromName(): Collection<Link> {
-        val matcher = JIRA_PATTER.matcher(testCase.description.fullName())
+        val matcher = JIRA_PATTER.matcher(testCase.description.path().value)
         val links = mutableSetOf<Link>()
         while (matcher.find()) {
             val key = matcher.group(1)

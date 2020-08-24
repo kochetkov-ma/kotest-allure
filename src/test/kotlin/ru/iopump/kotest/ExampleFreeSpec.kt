@@ -11,10 +11,10 @@ import io.qameta.allure.Links
 @Epic("Allure feature annotation on test class")
 @Feature("FreeSpec")
 @Links(
-    value = [
-        Link("iopump.ru"),
-        Link("ya.ru")
-    ]
+        value = [
+            Link("iopump.ru"),
+            Link("ya.ru")
+        ]
 )
 class ExampleFreeSpec : FreeSpec() {
 

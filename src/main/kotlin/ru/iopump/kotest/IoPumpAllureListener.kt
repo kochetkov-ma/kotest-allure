@@ -13,12 +13,13 @@ import io.qameta.allure.model.ExecutableItem
 import io.qameta.allure.model.Status
 import io.qameta.allure.model.StatusDetails
 import io.qameta.allure.util.ResultsUtils.*
-import org.junit.platform.commons.util.ExceptionUtils
 import org.opentest4j.TestAbortedException
 import org.slf4j.LoggerFactory.getLogger
 import ru.iopump.kotest.helper.AllureTestCase
 import ru.iopump.kotest.helper.AllureTestCaseProcessor
 import ru.iopump.kotest.helper.TestCaseMap
+import java.io.PrintWriter
+import java.io.StringWriter
 import java.lang.System.getProperty
 import java.lang.System.setProperty
 import java.nio.file.Paths
@@ -33,9 +34,16 @@ const val ALLURE_SLF4J_LOG = "allure.slf4j.log"
 @Suppress("unused")
 @AutoScan
 object IoPumpAllureListener : TestListener, ProjectListener {
+
     init {
-        val useSlf4j = getProperty(ALLURE_SLF4J_LOG, true.toString())!!.toBoolean()
-        if (useSlf4j) Allure.setLifecycle(Slf4jAllureLifecycle())
+        if (getProperty(ALLURE_RESULTS_DIR).isNullOrBlank())
+            setProperty(ALLURE_RESULTS_DIR, "./build/allure-results")
+
+        if (getProperty(CLEAR_ALLURE_RESULTS_DIR, false.toString()).toBoolean())
+            Paths.get(getProperty(ALLURE_RESULTS_DIR, "./build/allure-results")).toFile().deleteRecursively()
+
+        if (getProperty(ALLURE_SLF4J_LOG, true.toString()).toBoolean())
+            Allure.setLifecycle(Slf4jAllureLifecycle())
     }
 
     override val name: String = "IoPumpAllureListener"
@@ -45,14 +53,6 @@ object IoPumpAllureListener : TestListener, ProjectListener {
     private val usedGlobalNames = mutableMapOf<String, Int>()
     private val rootTcFailMap = mutableMapOf<String, TestResult>()
     private val testCaseMap = TestCaseMap()
-
-    override suspend fun beforeProject() {
-        if (getProperty(ALLURE_RESULTS_DIR).isNullOrBlank())
-            setProperty(ALLURE_RESULTS_DIR, "./build/allure-results")
-
-        if (getProperty(CLEAR_ALLURE_RESULTS_DIR, false.toString())!!.toBoolean())
-            Paths.get(getProperty(ALLURE_RESULTS_DIR, "./allure-results")).toFile().deleteRecursively()
-    }
 
     override suspend fun beforeTest(testCase: TestCase) {
         log.debug("[ALLURE] beforeTest ${testCase.description.name}")
@@ -98,7 +98,7 @@ object IoPumpAllureListener : TestListener, ProjectListener {
 
         val details = StatusDetails().apply {
             message = result.error?.message
-            if (result.error != null) trace = ExceptionUtils.readStackTrace(result.error)
+            if (result.error != null) trace = readStackTrace(result.error)
         }
 
         if (testCase.isTopLevel()) {
@@ -107,7 +107,7 @@ object IoPumpAllureListener : TestListener, ProjectListener {
 
             rootTestCaseList.forEachIndexed { index, tc ->
                 val desc = tc.description(index + shift)
-                val globalName = globalName(desc.name.displayName())
+                val globalName = globalName(desc.name.displayName)
 
                 allure().updateTestCase(tc.uuid) {
                     it.updateSpec(desc, globalName)
@@ -147,7 +147,7 @@ object IoPumpAllureListener : TestListener, ProjectListener {
 
     @Suppress("DEPRECATION")
     private fun AllureTestCaseResult.updateSpec(desc: Description, globalName: String) {
-        this.fullName = desc.fullName()
+        this.fullName = desc.testDisplayPath().value
         this.name = globalName
         this.testCaseId = safeId(desc)
         this.historyId = globalName
@@ -166,7 +166,7 @@ object IoPumpAllureListener : TestListener, ProjectListener {
 
     private fun startNestedTestCase(parent: AllureTestCase, case: AllureTestCase, prc: AllureTestCaseProcessor) {
         AllureStepResult().apply {
-            description = case.testCase.description.fullName()
+            description = case.testCase.description.testDisplayPath().value
             name = case.testCase.displayName
             description = prc.allDescriptions()
         }.let {
@@ -178,7 +178,7 @@ object IoPumpAllureListener : TestListener, ProjectListener {
         val rootKotestCase = rootAllureTestCase.testCase
 
         val tcLabels = listOfNotNull(
-                createSuiteLabel(rootKotestCase.description.spec().name.displayName()),
+                createSuiteLabel(rootKotestCase.description.spec().name.displayName),
                 createThreadLabel(),
                 createHostLabel(),
                 createLanguageLabel("kotlin"),
@@ -203,7 +203,7 @@ object IoPumpAllureListener : TestListener, ProjectListener {
     }
 
     private fun safeId(description: Description): String =
-            description.id().replace('/', ' ').replace("[^\\sa-zA-Z0-9]".toRegex(), "")
+            description.id().value.replace('/', ' ').replace("[^\\sa-zA-Z0-9]".toRegex(), "")
 
     private fun TestCase.map() = testCaseMap
 
@@ -217,5 +217,11 @@ object IoPumpAllureListener : TestListener, ProjectListener {
     } catch (t: Throwable) {
         log.error("Error getting allure lifecycle", t)
         throw t
+    }
+
+    private fun readStackTrace(throwable: Throwable?): String {
+        val stringWriter = StringWriter()
+        PrintWriter(stringWriter).use { printWriter -> throwable?.printStackTrace(printWriter) }
+        return stringWriter.toString()
     }
 }

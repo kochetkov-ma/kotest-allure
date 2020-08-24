@@ -48,7 +48,7 @@ internal class TestCaseMap {
     private fun internalError(test: Any?): Nothing =
         throw IllegalArgumentException("Internal listener algorithm error. Call author. Debug information: '$test'")
 
-    private fun TestCase.root() = Description(listOf(this.desc().parents.first()), this.desc().parents[1])
+    private fun TestCase.root() = desc().parents().first()
     private fun TestCase.desc() = this.description
     private fun TestCase.line() = this.source.lineNumber
     private fun uuid() = UUID.randomUUID().toString()
@@ -62,9 +62,9 @@ internal class TestCaseMap {
         root: AllureTestCase,
         isNewIteration: Boolean = false
     ): AllureTestCase {
-        val hasNestedParent = this.desc().parents.size >= 3
+        val hasNestedParent = this.desc().parents().size >= 3
         val nestedParent = if (hasNestedParent) {
-            testCaseMap[this.desc().parent()]
+            testCaseMap[this.desc().parent]
         } else null
         return AllureTestCase(uuid, this, nestedParent, root, isNewIteration).also { atc ->
             testCaseMap[this.desc()] = atc
