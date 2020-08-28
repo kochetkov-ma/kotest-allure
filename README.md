@@ -16,10 +16,6 @@ dependencies {
 
     // Kotest deps https://github.com/kotest/kotest/blob/master/doc/reference.md#getting-started
     testImplementation 'io.kotest:kotest-runner-junit5-jvm:<version>' // For Kotest framework with transitives 'core' and 'common'
-    // OR 
-    // Instead of 'kotest-runner-junit5-jvm' you may use direct Kotest dependencies
-    // testImplementation "io.kotest:kotest-core-jvm:<version>"
-    // testImplementation "io.kotest:kotest-common-jvm:<version>"
 }
 ```
 Allure Listener has annotation `@AutoScan` that's why not necessary to enable this Listener explicitly.  
