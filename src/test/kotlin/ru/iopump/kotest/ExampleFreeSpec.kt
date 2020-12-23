@@ -11,16 +11,20 @@ import io.qameta.allure.Links
 @Epic("Allure feature annotation on test class")
 @Feature("FreeSpec")
 @Links(
-        value = [
-            Link("iopump.ru"),
-            Link("ya.ru")
-        ]
+    value = [
+        Link("iopump.ru"),
+        Link("ya.ru")
+    ]
 )
 class ExampleFreeSpec : FreeSpec() {
 
     init {
+
         "Start kotest specification Scenario 1" - {
-            forAll(row("--1--"), row("--2--")) {
+            forAll(
+                row("--1--"),
+                row("--2--")
+            ) {
                 "Start step 1 - $it" {
                     step1()
                 }
@@ -33,15 +37,31 @@ class ExampleFreeSpec : FreeSpec() {
                 }
             }
         }
+
         "Start kotest specification Scenario 2" - {
-            "Start step 1" {
-                step1()
+            forAll(
+                row("--1--"),
+                row("--2--"),
+                row("--3--")
+            ) {
+                "Start step 1 [$it]" {
+                    step1()
+                }
+                "Nested step has been printed [$it]" {
+                    stepNested()
+                }
+                "Step 2 has been printed too [$it]" {
+                    step2()
+                }
             }
-            "Nested step has been printed" {
-                stepNested()
-            }
-            "Step 2 has been printed too" {
-                step2()
+
+            forAll(
+                row("10"),
+                row("20"),
+            ) {
+                "Just single step [$it]" {
+                    step1()
+                }
             }
         }
     }

@@ -3,5 +3,5 @@
 .allure/
 allure-results/
 .idea/
-gradle/wrapper/
+gradle/wrapper/gradle-wrapper.jar
 build/
