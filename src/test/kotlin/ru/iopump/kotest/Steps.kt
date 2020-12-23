@@ -1,10 +1,11 @@
 package ru.iopump.kotest
 
+import io.qameta.allure.Attachment
 import io.qameta.allure.Step
 
-@Step("Allure aspectj step annotation on method 'step1'")
-internal fun step1() {
-    println("Execute step-1")
+@Step("Allure aspectj step annotation on method 'step1'. With param {param}")
+internal fun step1(param: String = "default") {
+    println("Execute step-1 with param $param")
 }
 
 @Step("Allure aspectj step annotation on method 'step2'")
@@ -27,3 +28,7 @@ internal fun stepException1() {
 internal fun stepException2() {
     throw AssertionError("Step error2")
 }
+
+@Attachment("Allure Attachment created with param {param}")
+@JvmName("attachText")
+fun attachText(param: String = "default"): String = "This is allure Attachment $param"

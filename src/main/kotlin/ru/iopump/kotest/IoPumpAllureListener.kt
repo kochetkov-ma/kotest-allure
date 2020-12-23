@@ -43,7 +43,7 @@ object IoPumpAllureListener : TestListener, ProjectListener {
             Paths.get(getProperty(ALLURE_RESULTS_DIR, "./build/allure-results")).toFile().deleteRecursively()
 
         if (getProperty(ALLURE_SLF4J_LOG, true.toString()).toBoolean())
-            Allure.setLifecycle(Slf4jAllureLifecycle())
+            Allure.setLifecycle(LoggedAllureLifecycle())
     }
 
     override val name: String = "IoPumpAllureListener"

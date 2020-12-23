@@ -61,6 +61,7 @@ class ExampleFreeSpec : FreeSpec() {
             ) {
                 "Just single step [$it]" {
                     step1()
+                    attachText("forAll")
                 }
             }
         }
