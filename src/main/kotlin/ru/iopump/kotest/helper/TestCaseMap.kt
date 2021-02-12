@@ -2,7 +2,7 @@ package ru.iopump.kotest.helper
 
 import io.kotest.core.test.Description
 import io.kotest.core.test.TestCase
-import java.util.*
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 internal class TestCaseMap {
@@ -16,7 +16,7 @@ internal class TestCaseMap {
      */
     fun put(testCase: TestCase): AllureTestCase {
         val uuid = uuid()
-        return if (testCase.isTopLevel()) {
+        return if (testCase.description.isRootTest()) {
             testCase.addAsRootTc(uuid)
         } else {
             val rootAtcList = rootTestCaseMap[testCase.root()] ?: internalError(testCase.root())
@@ -80,7 +80,7 @@ data class AllureTestCase(
     val refToRoot: AllureTestCase?,
     val isNewIteration: Boolean = false
 ) {
-    val isRoot by lazy { testCase.isTopLevel() }
+    val isRoot by lazy { testCase.description.isRootTest() }
     private val internalName: String = testCase.description.name.name
 
     private fun indexedName(index: Int): String {

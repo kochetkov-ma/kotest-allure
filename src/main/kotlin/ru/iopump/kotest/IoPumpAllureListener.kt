@@ -12,7 +12,12 @@ import io.qameta.allure.AllureLifecycle
 import io.qameta.allure.model.ExecutableItem
 import io.qameta.allure.model.Status
 import io.qameta.allure.model.StatusDetails
-import io.qameta.allure.util.ResultsUtils.*
+import io.qameta.allure.util.ResultsUtils.createFrameworkLabel
+import io.qameta.allure.util.ResultsUtils.createHostLabel
+import io.qameta.allure.util.ResultsUtils.createLanguageLabel
+import io.qameta.allure.util.ResultsUtils.createPackageLabel
+import io.qameta.allure.util.ResultsUtils.createSuiteLabel
+import io.qameta.allure.util.ResultsUtils.createThreadLabel
 import org.opentest4j.TestAbortedException
 import org.slf4j.LoggerFactory.getLogger
 import ru.iopump.kotest.helper.AllureTestCase
@@ -101,7 +106,7 @@ object IoPumpAllureListener : TestListener, ProjectListener {
             if (result.error != null) trace = readStackTrace(result.error)
         }
 
-        if (testCase.isTopLevel()) {
+        if (testCase.description.isRootTest()) {
             val rootTestCaseList = testCase.map().getRoot(testCase)
             val shift = if (rootTestCaseList.size >= 2) 1 else 0
 
@@ -203,7 +208,7 @@ object IoPumpAllureListener : TestListener, ProjectListener {
     }
 
     private fun safeId(description: Description): String =
-            description.id().value.replace('/', ' ').replace("[^\\sa-zA-Z0-9]".toRegex(), "")
+        description.testId.value.replace('/', ' ').replace("[^\\sa-zA-Z0-9]".toRegex(), "")
 
     private fun TestCase.map() = testCaseMap
 
