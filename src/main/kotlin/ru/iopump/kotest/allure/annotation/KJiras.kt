@@ -1,4 +1,4 @@
-package ru.iopump.kotest.annotation
+package ru.iopump.kotest.allure.annotation
 
 import java.lang.annotation.Inherited
 

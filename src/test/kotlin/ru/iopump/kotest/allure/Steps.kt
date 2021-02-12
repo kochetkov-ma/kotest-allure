@@ -1,4 +1,4 @@
-package ru.iopump.kotest
+package ru.iopump.kotest.allure
 
 import io.qameta.allure.Attachment
 import io.qameta.allure.Step

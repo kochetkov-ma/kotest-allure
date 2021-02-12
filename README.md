@@ -98,9 +98,10 @@ This feature enabled by default.
 You may disable by system env `allure.slf4j.log`.
 
 #### Skip following nested scenarios on fail
-If Test Case has nested scenarios and any of them will fail then follows ones will fail too with exception `TestAbortedException`
+If Test Case has nested scenarios and any of them will fail then follows ones will fail too with
+exception `TestAbortedException`
 This feature enabled by default.  
-You may disable by system env `skip.on.fail`.
+You may disable by system env `kotest.allure.skip.on.fail`.
 
 #### Clean allure results on start
 Allure results directory specified by system env `allure.results.directory` will be removed on tet project start. 
@@ -112,11 +113,13 @@ There is a full setting table. All settings adjust by system variable:
 
 | Name                           | Description                                                    | Default                |
 |--------------------------------|----------------------------------------------------------------|------------------------|
-| allure.jira.pattern            | see [Links in test name](#links-in-test-name)                  | \\[([a-zA-Z]+-\\d+)]   |
+| allure.jira.pattern            | see [Links in test name](#links-in-test-name)                  | \[([a-zA-Z]+-\d+)]     |
 | allure.results.directory       | path to write results during the test                          | ./build/allure-results |
-| allure.results.directory.clear | clean result directory before whole test execution             | false                  |
-| skip.on.fail                   | skip follow nested (not root tests) scenarios or steps on fail | true                   |
+| allure.results.directory.clear | clean result directory before whole test execution             | true                   |
+| kotest.allure.skip.on.fail     | skip follow nested (not root tests) scenarios or steps on fail | true                   |
 | allure.slf4j.log               | duplicate allure step and attachment messages to Slf4j Logger  | true                   |
+| allure.lifecycle.class         | Set `AllureLifecycle` full class name                          | `ru.iopump.kotest.allure.api.Slf4JAllureLifecycle`|
+| kotest.allure.data.driven      | Create new Allure test case on each new iteration in Data Driven tests or Property Testing| true |
 
 # Public report example
 - See example generated report on [allure.iopump.ru](http://allure.iopump.ru/reports/kotest-allure)  

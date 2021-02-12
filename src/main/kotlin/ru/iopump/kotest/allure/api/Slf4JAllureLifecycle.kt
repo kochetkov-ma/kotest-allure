@@ -1,34 +1,39 @@
-package ru.iopump.kotest
+package ru.iopump.kotest.allure.api
 
 import io.qameta.allure.AllureLifecycle
 import io.qameta.allure.model.StepResult
-import org.slf4j.LoggerFactory
+import org.slf4j.Logger
+import ru.iopump.kotest.allure.api.KotestAllureConstant.VAR
 import java.io.InputStream
 import java.nio.charset.StandardCharsets.UTF_8
 
-class LoggedAllureLifecycle : AllureLifecycle() {
-    private companion object {
-        private val log = LoggerFactory.getLogger(LoggedAllureLifecycle::class.java)
-    }
+/**
+ * Decorate [startStep] and [addAttachment] with SLF4J [Logger]. Using by default.
+ * You may set custom lifecycle via env/sys var [VAR.ALLURE_LIFECYCLE_CLASS].
+ */
+open class Slf4JAllureLifecycle(private val logger: Logger) : AllureLifecycle() {
 
     override fun startStep(parentUuid: String?, uuid: String?, result: StepResult?) =
-        super.startStep(parentUuid, uuid, result).also { log.info("[ALLURE-STEP] ${result.log}") }
+        super.startStep(parentUuid, uuid, result).also { logger.info("STEP ${result.log}") }
 
     override fun addAttachment(name: String?, type: String?, fileExtension: String?, stream: InputStream?) {
-        when (log.isDebugEnabled) {
+        when (logger.isDebugEnabled) {
             true -> stream.use { io ->
                 runCatching { io?.readBytes() ?: "".toByteArray(UTF_8) }
                     .getOrElse { it.localizedMessage.toByteArray(UTF_8) }
             }.apply {
                 super.addAttachment(name, type, fileExtension, this.inputStream()).also {
-                    log.debug("[ALLURE-ATTACHMENT] $name $type $fileExtension\n{}", this.toString(UTF_8).take(2000))
+                    logger.debug("ATTACHMENT $name $type $fileExtension\n{}", this.toString(UTF_8).take(2000))
                 }
             }
             false -> super.addAttachment(name, type, fileExtension, stream)
         }
     }
 
+    /////////////////
     //// PRIVATE ////
+    /////////////////
+
     private val StepResult?.log
         get() = when (this) {
             null -> ""

@@ -1,4 +1,4 @@
-package ru.iopump.kotest
+package ru.iopump.kotest.allure
 
 import io.kotest.core.spec.style.FreeSpec
 import io.kotest.data.forAll

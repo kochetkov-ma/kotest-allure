@@ -1,12 +1,17 @@
-package ru.iopump.kotest
+package ru.iopump.kotest.allure
 
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.data.forAll
 import io.kotest.data.row
-import io.qameta.allure.*
-import ru.iopump.kotest.annotation.KDescription
-import ru.iopump.kotest.annotation.KJira
-import ru.iopump.kotest.annotation.KJiras
+import io.qameta.allure.Epic
+import io.qameta.allure.Feature
+import io.qameta.allure.Issue
+import io.qameta.allure.Issues
+import io.qameta.allure.Link
+import io.qameta.allure.Links
+import ru.iopump.kotest.allure.annotation.KDescription
+import ru.iopump.kotest.allure.annotation.KJira
+import ru.iopump.kotest.allure.annotation.KJiras
 
 @Epic("Allure feature annotation on test class")
 @Feature("Behavior")
