@@ -14,7 +14,7 @@ import java.nio.charset.StandardCharsets.UTF_8
 open class Slf4JAllureLifecycle(private val logger: Logger) : AllureLifecycle() {
 
     override fun startStep(parentUuid: String?, uuid: String?, result: StepResult?) =
-        super.startStep(parentUuid, uuid, result).also { logger.info("STEP ${result.log}") }
+        super.startStep(parentUuid, uuid, result).also { logger.info("STEP: ${result.log}") }
 
     override fun addAttachment(name: String?, type: String?, fileExtension: String?, stream: InputStream?) {
         when (logger.isDebugEnabled) {
@@ -23,7 +23,7 @@ open class Slf4JAllureLifecycle(private val logger: Logger) : AllureLifecycle() 
                     .getOrElse { it.localizedMessage.toByteArray(UTF_8) }
             }.apply {
                 super.addAttachment(name, type, fileExtension, this.inputStream()).also {
-                    logger.debug("ATTACHMENT $name $type $fileExtension\n{}", this.toString(UTF_8).take(2000))
+                    logger.debug("ATTACHMENT: $name $type $fileExtension\n{}", this.toString(UTF_8).take(2000))
                 }
             }
             false -> super.addAttachment(name, type, fileExtension, stream)

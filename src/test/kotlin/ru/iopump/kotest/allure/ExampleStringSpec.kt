@@ -7,8 +7,8 @@ import io.qameta.allure.Epic
 import io.qameta.allure.Feature
 import io.qameta.allure.Link
 import io.qameta.allure.Links
-import ru.iopump.kotest.allure.api.Execution.setUpFixture
-import ru.iopump.kotest.allure.api.Execution.tearDownFixture
+import ru.iopump.kotest.allure.api.KotestAllureExecution.setUpFixture
+import ru.iopump.kotest.allure.api.KotestAllureExecution.tearDownFixture
 
 @Epic("Allure feature annotation on test class")
 @Feature("StringSpec")

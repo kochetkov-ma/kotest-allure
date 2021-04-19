@@ -9,8 +9,8 @@ import io.qameta.allure.model.StatusDetails
 import io.qameta.allure.util.ResultsUtils
 import org.opentest4j.TestAbortedException
 import org.slf4j.LoggerFactory
-import ru.iopump.kotest.allure.api.Execution.bestName
 import ru.iopump.kotest.allure.api.KotestAllureConstant.VAR.SKIP_ON_FAIL
+import ru.iopump.kotest.allure.api.KotestAllureExecution.bestName
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.lang.System.getProperty
@@ -21,8 +21,6 @@ import kotlin.reflect.full.isSubclassOf
 
 internal object InternalUtil {
     private val skipOnFail = SKIP_ON_FAIL.prop(true)
-
-    internal val log = "allure".logger()
 
     private val AllureTestResult.isBad get() = status in arrayOf(Status.FAILED, Status.BROKEN)
 

@@ -8,10 +8,10 @@ import io.qameta.allure.AllureLifecycle
 import io.qameta.allure.model.FixtureResult
 import io.qameta.allure.model.Status
 import ru.iopump.kotest.allure.KotestAllureListener
-import ru.iopump.kotest.allure.api.Execution.PROJECT_UUID
-import ru.iopump.kotest.allure.api.Execution.containerUuid
-import ru.iopump.kotest.allure.api.Execution.setUpFixture
 import ru.iopump.kotest.allure.api.KotestAllureConstant.VAR
+import ru.iopump.kotest.allure.api.KotestAllureExecution.PROJECT_UUID
+import ru.iopump.kotest.allure.api.KotestAllureExecution.containerUuid
+import ru.iopump.kotest.allure.api.KotestAllureExecution.setUpFixture
 import ru.iopump.kotest.allure.helper.InternalUtil.logger
 import ru.iopump.kotest.allure.helper.InternalUtil.prop
 import ru.iopump.kotest.allure.helper.InternalUtil.safeFileName
@@ -24,8 +24,8 @@ import kotlin.reflect.KClass
  * For example: create fixture [setUpFixture] or obtain actual [Spec] uuid in Allure Storage - [containerUuid]
  * or project execution root uuid - [PROJECT_UUID]
  */
-object Execution {
-    private val log = logger<Execution>()
+object KotestAllureExecution {
+    private val log = logger<KotestAllureExecution>()
 
     /**
      * Get current [AllureLifecycle] or extended version for example [Slf4JAllureLifecycle]
@@ -167,13 +167,13 @@ object Execution {
             runCatching { Class.forName(allureClassRef).getConstructor().newInstance() as AllureLifecycle }
                 .onFailure { throw RuntimeException("Cannot create AllureLifecycle from class '$allureClassRef'", it) }
                 .getOrThrow()
-        else (if (slf4jEnabled) Slf4JAllureLifecycle(log) else AllureLifecycle()).also { Allure.setLifecycle(it) })
+        else (if (slf4jEnabled) Slf4JAllureLifecycle(log) else AllureLifecycle())).also { Allure.setLifecycle(it) }
     }
 
     private fun clearPreviousResults(dir: File) {
         if (VAR.CLEAR_ALLURE_RESULTS_DIR.prop(true)) {
             if (dir.exists() && dir.isDirectory) {
-                runCatching { dir.deleteRecursively() }.getOrElse { log.error("Cannot delete 'dir'", it) }
+                runCatching { dir.deleteRecursively() }.getOrElse { log.error("Cannot delete '$dir'", it) }
             }
         }
     }

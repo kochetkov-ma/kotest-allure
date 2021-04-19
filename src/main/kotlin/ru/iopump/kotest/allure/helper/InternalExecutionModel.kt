@@ -4,11 +4,11 @@ import io.kotest.core.test.Description
 import io.kotest.core.test.TestResult.Companion.success
 import io.kotest.core.test.TestStatus
 import io.qameta.allure.model.StepResult
-import ru.iopump.kotest.allure.api.Execution.ALLURE
-import ru.iopump.kotest.allure.api.Execution.containerUuid
+import ru.iopump.kotest.allure.KotestAllureListener.log
 import ru.iopump.kotest.allure.api.KotestAllureConstant.VAR.DATA_DRIVEN_SUPPORT
+import ru.iopump.kotest.allure.api.KotestAllureExecution.ALLURE
+import ru.iopump.kotest.allure.api.KotestAllureExecution.containerUuid
 import ru.iopump.kotest.allure.helper.InternalExecutionModel.Iteration.Factory.scenario
-import ru.iopump.kotest.allure.helper.InternalUtil.log
 import ru.iopump.kotest.allure.helper.InternalUtil.processSkipResult
 import ru.iopump.kotest.allure.helper.InternalUtil.prop
 import ru.iopump.kotest.allure.helper.InternalUtil.toAllure
@@ -63,7 +63,7 @@ object InternalExecutionModel {
                 if (dataDrivenSupport && prune) iterationMap.remove(testCase.description)
                 testUuidMap.remove(testCase.description)
             },
-            { log.error("Cannot stop container '$testCase' because it hasn't been started") }
+            { log.error("Cannot stop Scenario '$testCase' because it hasn't been started") }
         )
     }
 
@@ -133,13 +133,12 @@ object InternalExecutionModel {
                                 testUuidMap[description].toOptional().ifPresent(updateFunction)
                             }
                         }
-
                         testUuidMap.remove(testCase.description)
                     },
                     { stopScenario(testCase, testResult) }
                 )
             },
-            { log.error("Cannot stop step '$testCase' because it hasn't been started") }
+            { log.error("Cannot stop Step '$testCase' because it hasn't been started") }
         )
     }
 

@@ -8,31 +8,41 @@ Extended Allure Listener for Kotest
 [![maven central](https://img.shields.io/maven-central/v/ru.iopump.kotest/kotest-allure)](http://search.maven.org/#search|ga|1|kotest-allure)
 
 # Quick Start
+
 [Sample project](https://github.com/kochetkov-ma/pump-samples/tree/master/kotest-allure-sample)
+
 ### Add dependencies
+
 ```groovy
 dependencies {
     testImplementation "ru.iopump.kotest:kotest-allure:$kotestAllureVersion"
 
     // Kotest deps https://github.com/kotest/kotest/blob/master/doc/reference.md#getting-started
-    testImplementation 'io.kotest:kotest-runner-junit5-jvm:<version>' // For Kotest framework with transitives 'core' and 'common'
+    testImplementation 'io.kotest:kotest-runner-junit5-jvm:<version>'
+    // For Kotest framework with transitives 'core' and 'common'
 }
 ```
+
 Allure Listener has annotation `@AutoScan` that's why not necessary to enable this Listener explicitly.  
 Also, it provides necessary `allure common libs` but doesn't offer Kotest dependency.
 
 ### Results
+
 By default, results were collected to `./build/allure-results`.  
 You can override it by system property `-Dallure.results.directory=...`.  
 Or via gradle script:
+
 ```groovy
 test {
     systemProperty "allure.results.directory", file("$buildDir/allure-results")
     useJUnitPlatform()
 }
 ```
+
 ### Reports
+
 Use gradle [allure plugin](https://github.com/allure-framework/allure-gradle) to generate report.
+
 ```groovy
 plugins {
     id "io.qameta.allure" version "$allurePluginVersion"
@@ -45,70 +55,93 @@ allure {
     resultsDir = file "$buildDir/allure-results"
 }
 ``` 
-See [example](https://github.com/kochetkov-ma/pump-samples/tree/master/kotest-allure-sample) 
+
+See [example](https://github.com/kochetkov-ma/pump-samples/tree/master/kotest-allure-sample)
+
 ### API
+
 #### Annotations
-##### `KDescription` 
+
+##### `KDescription`
+
 Specify test case description through this annotation with markdown text.
+
 ```kotlin
-@KDescription("""
+@KDescription(
+    """
     This is multiline description.
     It must be a new line
-""")
+"""
+)
 class ExampleBddSpec : BehaviorSpec() 
 ```
 
-##### `KJira` 
+##### `KJira`
+
 Set link to Jira issue (not defect). You must adjust jira link pattern before by `allure.link.jira.pattern` variable.  
 The best way is `allure.properties` in resource dir (or classpath)  
 allure.properties:
+
 ```properties
 allure.link.issue.pattern=https://example.org/issue/{}
 allure.link.tms.pattern=https://example.org/tms/{}
 allure.link.jira.pattern=https://example.org/jira/{}
 ```  
+
 Code:
+
 ```kotlin
 @KJiras(
-        value = [KJira("TTT-111"), KJira("TTT-000")]
+    value = [KJira("TTT-111"), KJira("TTT-000")]
 )
 class ExampleBddSpec : BehaviorSpec()
 ```
 
 ##### `KJiras`
+
 Repeatable (annotation container) version of `KJira` annotation
 
 #### Links in test name
-You may specify jira link in a test name and even nested test name. Link must be matches with pattern `\\[([a-zA-Z]+-\\d+)]`.  
+
+You may specify jira link in a test name and even nested test name. Link must be matches with
+pattern `\\[([a-zA-Z]+-\\d+)]`.  
 Use system variable `allure.jira.pattern` to override it.
+
 ```kotlin
 class ExampleBddSpec : BehaviorSpec({
-        Given("[PRJ-100] Start kotest specification Scenario") { println("...") }
+    Given("[PRJ-100] Start kotest specification Scenario") { println("...") }
 })
 ```
-`[PRJ-100]` consider as Jira link with key `PRJ-100` don't forget to define `allure.link.jira.pattern` in `allure.properties`
+
+`[PRJ-100]` consider as Jira link with key `PRJ-100` don't forget to define `allure.link.jira.pattern`
+in `allure.properties`
 
 ### Other features
-See main feature above  
+
+See main feature above
 
 #### Intercepting all Allure messages
-Every `step` and `attachment` will be intercept and post to Sl4j logger by `ru.iopump.kotest.Slf4jAllureLifecycle` 
+
+Every `step` and `attachment` will be intercept and post to Sl4j logger by `ru.iopump.kotest.Slf4jAllureLifecycle`
 `step` messages have an INFO level. `attachment` messages have an DEBUG level.  
 This feature enabled by default.  
 You may disable by system env `allure.slf4j.log`.
 
 #### Skip following nested scenarios on fail
+
 If Test Case has nested scenarios and any of them will fail then follows ones will fail too with
 exception `TestAbortedException`
 This feature enabled by default.  
 You may disable by system env `kotest.allure.skip.on.fail`.
 
 #### Clean allure results on start
-Allure results directory specified by system env `allure.results.directory` will be removed on tet project start. 
-This feature disabled by default.  
+
+Allure results directory specified by system env `allure.results.directory` will be removed on tet project start. This
+feature disabled by default.  
 You may enable by system env `allure.results.directory.clear`.
 
 ### Settings
+
 There is a full setting table. All settings adjust by system variable:
 
 | Name                           | Description                                                    | Default                |
@@ -122,5 +155,23 @@ There is a full setting table. All settings adjust by system variable:
 | kotest.allure.data.driven      | Create new Allure test case on each new iteration in Data Driven tests or Property Testing| true |
 
 # Public report example
-- See example generated report on [allure.iopump.ru](http://allure.iopump.ru/reports/kotest-allure)  
-- [Sample project](https://github.com/kochetkov-ma/pump-samples/tree/master/kotest-allure-sample)  
+
+- See example generated report on [allure.iopump.ru](http://allure.iopump.ru/reports/kotest-allure)
+- [Sample project](https://github.com/kochetkov-ma/pump-samples/tree/master/kotest-allure-sample)
+
+# Troubleshooting
+
+### Duplicated steps
+
+![duplicated-steps.png](duplicated-steps.png)
+
+Because the listener has annotation `@AutoScan` it can be duplicated when you specify it in Configuration like this:
+
+```kotlin
+    override fun listeners(): List<Listener> = listOf(
+    KotestAllureListener
+)
+```
+
+You should delete `KotestAllureListener` or other Allure Listeners from any configuration classes. Check you
+dependencies - it must contain the only allure extension `ru.iopump.kotest:kotest-allure`

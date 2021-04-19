@@ -7,10 +7,10 @@ import io.kotest.core.spec.Spec
 import io.kotest.core.test.TestCase
 import io.kotest.core.test.TestResult
 import io.qameta.allure.model.TestResultContainer
-import ru.iopump.kotest.allure.api.Execution.ALLURE
-import ru.iopump.kotest.allure.api.Execution.EXECUTION_START_CALLBACK
-import ru.iopump.kotest.allure.api.Execution.PROJECT_UUID
-import ru.iopump.kotest.allure.api.Execution.containerUuid
+import ru.iopump.kotest.allure.api.KotestAllureExecution.ALLURE
+import ru.iopump.kotest.allure.api.KotestAllureExecution.EXECUTION_START_CALLBACK
+import ru.iopump.kotest.allure.api.KotestAllureExecution.PROJECT_UUID
+import ru.iopump.kotest.allure.api.KotestAllureExecution.containerUuid
 import ru.iopump.kotest.allure.helper.InternalExecutionModel.startScenario
 import ru.iopump.kotest.allure.helper.InternalExecutionModel.startStep
 import ru.iopump.kotest.allure.helper.InternalExecutionModel.stopScenario
@@ -22,12 +22,12 @@ import kotlin.reflect.KClass
  * Extended Kotest Allure listener.
  * It provides full hierarchy model in Allure Report instead of official Kotest extension.
  * With unlimited nesting of steps and support for iterations.
- * See [ru.iopump.kotest.allure.api.Execution] - get access to Spec and Project uuid to add Allure fixture.
+ * See [ru.iopump.kotest.allure.api.KotestAllureExecution] - get access to Spec and Project uuid to add Allure fixture.
  * See
  */
 @AutoScan
 object KotestAllureListener : ProjectListener, TestListener {
-    private val log = logger<KotestAllureListener>()
+    internal val log = logger<KotestAllureListener>()
     override val name: String = "kotest_allure_listener"
 
     override suspend fun beforeProject() {
@@ -97,5 +97,5 @@ object KotestAllureListener : ProjectListener, TestListener {
     //// PRIVATE ////
     /////////////////
 
-    private fun debug(msg: String) = if (log.isDebugEnabled) log.debug("ALLURE $msg") else null
+    private fun debug(msg: String) = if (log.isDebugEnabled) log.debug(msg) else null
 }
