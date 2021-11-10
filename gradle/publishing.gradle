@@ -1,16 +1,55 @@
 ////// make release //////
-task javadocJar(type: Jar) {
-    archiveClassifier.set 'javadoc'
-    from javadoc
-    javadoc.options.addStringOption('Xdoclint:none', '-quiet')
+
+java {
+    withJavadocJar()
+    withSourcesJar()
 }
-task sourcesJar(type: Jar) {
-    archiveClassifier.set 'sources'
-    from sourceSets.main.allSource
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            groupId = project.group
+            artifactId = project.name
+            from components.java
+            pom {
+                name = 'Kotest Allure Integration'
+                description = 'Allure Listener for Kotest and some extra functions'
+                url = 'https://github.com/kochetkov-ma/kotest-allure'
+
+                packaging 'jar'
+
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'kochetkov-ma'
+                        name = 'Maxim Kochetkov'
+                        email = 'kochetkov-ma@yandex.ru'
+                    }
+                }
+
+                scm {
+                    connection = 'https://github.com/kochetkov-ma/kotest-allure.git'
+                    developerConnection = 'https://github.com/kochetkov-ma/kotest-allure.git'
+                    url = 'https://github.com/kochetkov-ma/kotest-allure'
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            credentials(PasswordCredentials)
+            def releasesRepoUrl = url("https://oss.sonatype.org/service/local/staging/deploy/maven2/")
+            def snapshotsRepoUrl = url("https://oss.sonatype.org/content/repositories/snapshots/")
+            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+        }
+    }
 }
-artifacts {
-    archives javadocJar, sourcesJar
-}
+
 signing {
     String signingKey = (findProperty('signing.key') as String)?.replaceAll('\\[n]', System.lineSeparator())
     signingKey = signingKey?.startsWith("\"") ? signingKey[1..-2] : signingKey
@@ -19,42 +58,9 @@ signing {
     signingPassword = signingPassword?.startsWith("\"") ? signingPassword[1..-2] : signingPassword
 
     useInMemoryPgpKeys(signingKey, signingPassword)
-    sign configurations.archives
+    sign publishing.publications.mavenJava
 }
-uploadArchives {
-    repositories {
-        mavenDeployer {
-            beforeDeployment { MavenDeployment deployment -> //noinspection GrDeprecatedAPIUsage
-                signing.signPom(deployment)
-            }
-            repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
-                authentication(userName: ossrhUsername, password: ossrhPassword)
-            }
-            snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
-                authentication(userName: ossrhUsername, password: ossrhPassword)
-            }
-            pom.project {
-                name = 'Kotest Allure Integration'
-                description 'Allure Listener for Kotest and some extra functions'
-                url 'https://github.com/kochetkov-ma/kotest-allure'
-                packaging 'jar'
-                scm {
-                    connection 'https://github.com/kochetkov-ma/kotest-allure.git'
-                    developerConnection 'https://github.com/kochetkov-ma/kotest-allure.git'
-                    url 'https://github.com/kochetkov-ma/kotest-allure'
-                }
-                licenses { license { name = 'The Apache License, Version 2.0'; url 'http://www.apache.org/licenses/LICENSE-2.0.txt' } }
-                developers {
-                    developer {
-                        id 'kochetkov-ma'
-                        name = 'Maxim Kochetkov'
-                        email 'kochetkov-ma@yandex.ru'
-                    }
-                }
-            }
-        }
-    }
-}
+
 nexusStaging {
     packageGroup = "ru.iopump"
     numberOfRetries = 50
