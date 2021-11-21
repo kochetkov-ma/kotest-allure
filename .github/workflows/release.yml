@@ -19,10 +19,12 @@ jobs:
           java-package: jdk
           architecture: x64
       - name: Build / Upload to OSS sonatype / Promote to Maven Central
+        env:
+          GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
         uses: eskatos/gradle-command-action@v1
         with:
           gradle-version: 6.8.3
-          arguments: '--info --stacktrace -Psigning.key="${{ secrets.GPG_SIGNING_KEY }}"
+          arguments: '--info --stacktrace
         -Psigning.password=${{ secrets.GPG_SIGNING_PASSWORD }}
         -PossrhUsername=kochetkov-ma
         -PossrhPassword=${{ secrets.ossrhPassword }}

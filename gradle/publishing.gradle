@@ -15,7 +15,7 @@ java {
     withSourcesJar()
 }
 
-static def trim(String sourceString, String trimmedChar) {
+static def trim(String sourceString, String trimmedChar = '"') {
     sourceString.replaceAll(~/^\$trimmedChar+|\$trimmedChar+$/, '')
 }
 
@@ -78,8 +78,8 @@ publishing {
 }
 
 signing {
-    String signingKeyText = findProperty('signing.key') ?: loadSigningKeyFromFile()
-    String signingPassword = trim(findProperty('signing.password') as String ?: '', '"')
+    String signingKeyText = trim(System.getenv('GPG_SIGNING_KEY') ?: loadSigningKeyFromFile())
+    String signingPassword = trim(findProperty('signing.password') as String ?: '')
 
     logger.lifecycle('GPG signing key: {}', signingKeyText.take(100) + '******')
     useInMemoryPgpKeys(signingKeyText, signingPassword)
