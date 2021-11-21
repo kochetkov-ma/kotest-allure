@@ -4,57 +4,88 @@ task javadocJar(type: Jar) {
     from javadoc
     javadoc.options.addStringOption('Xdoclint:none', '-quiet')
 }
+
 task sourcesJar(type: Jar) {
     archiveClassifier.set 'sources'
     from sourceSets.main.allSource
 }
-artifacts {
-    archives javadocJar, sourcesJar
-}
-signing {
-    String signingKey = (findProperty('signing.key') as String)?.replaceAll('\\[n]', System.lineSeparator())
-    signingKey = signingKey?.startsWith("\"") ? signingKey[1..-2] : signingKey
 
-    String signingPassword = findProperty('signing.password')
-    signingPassword = signingPassword?.startsWith("\"") ? signingPassword[1..-2] : signingPassword
-
-    useInMemoryPgpKeys(signingKey, signingPassword)
-    sign configurations.archives
+java {
+    withJavadocJar()
+    withSourcesJar()
 }
-uploadArchives {
-    repositories {
-        mavenDeployer {
-            beforeDeployment { MavenDeployment deployment -> //noinspection GrDeprecatedAPIUsage
-                signing.signPom(deployment)
-            }
-            repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
-                authentication(userName: ossrhUsername, password: ossrhPassword)
-            }
-            snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
-                authentication(userName: ossrhUsername, password: ossrhPassword)
-            }
-            pom.project {
+
+static def trim(String sourceString, String trimmedChar) {
+    sourceString.replaceAll(~/^\$trimmedChar+|\$trimmedChar+$/, '')
+}
+
+def loadSigningKeyFromFile() {
+    def signingKeyAbsolutePath = findProperty('signing.key.path')
+    def signingKeyFile = file(signingKeyAbsolutePath)
+    logger.lifecycle("GPG signing key will be loaded from file '$signingKeyFile'")
+
+
+    return signingKeyFile.exists() ? signingKeyFile.text : ''
+}
+
+publishing {
+    publications {
+        kotest5(MavenPublication) {
+            groupId = project.group
+            artifactId = project.name
+            from components.java
+            pom {
                 name = 'Kotest Allure Integration'
-                description 'Allure Listener for Kotest and some extra functions'
-                url 'https://github.com/kochetkov-ma/kotest-allure'
+                description = 'Allure Listener for Kotest and some extra functions'
+                url = 'https://github.com/kochetkov-ma/kotest-allure'
+
                 packaging 'jar'
-                scm {
-                    connection 'https://github.com/kochetkov-ma/kotest-allure.git'
-                    developerConnection 'https://github.com/kochetkov-ma/kotest-allure.git'
-                    url 'https://github.com/kochetkov-ma/kotest-allure'
+
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
                 }
-                licenses { license { name = 'The Apache License, Version 2.0'; url 'http://www.apache.org/licenses/LICENSE-2.0.txt' } }
                 developers {
                     developer {
-                        id 'kochetkov-ma'
+                        id = 'kochetkov-ma'
                         name = 'Maxim Kochetkov'
-                        email 'kochetkov-ma@yandex.ru'
+                        email = 'kochetkov-ma@yandex.ru'
                     }
+                }
+
+                scm {
+                    connection = 'https://github.com/kochetkov-ma/kotest-allure.git'
+                    developerConnection = 'https://github.com/kochetkov-ma/kotest-allure.git'
+                    url = 'https://github.com/kochetkov-ma/kotest-allure'
                 }
             }
         }
     }
+    repositories {
+        maven {
+            name = 'ossrh'
+            credentials {
+                username ossrhUsername
+                password ossrhPassword
+            }
+            url = version.endsWith('SNAPSHOT')
+                    ? "https://oss.sonatype.org/content/repositories/snapshots/"
+                    : "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
+        }
+    }
 }
+
+signing {
+    String signingKeyText = findProperty('signing.key') ?: loadSigningKeyFromFile()
+    String signingPassword = trim(findProperty('signing.password') as String ?: '', '"')
+
+    logger.lifecycle('GPG signing key: {}', signingKeyText.take(100) + '******')
+    useInMemoryPgpKeys(signingKeyText, signingPassword)
+    sign publishing.publications.kotest5
+}
+
 nexusStaging {
     packageGroup = "ru.iopump"
     numberOfRetries = 50

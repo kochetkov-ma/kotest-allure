@@ -1,15 +1,16 @@
 plugins {
     id 'idea'
     id 'signing'
-    id 'maven'
+    id 'maven-publish'
 
     id 'org.jetbrains.kotlin.jvm' version "$kotlinVersion"
     id 'io.qameta.allure' version "$allurePluginVersion"
     id 'io.codearte.nexus-staging' version "$nexusStagingPluginVersion"
     id 'com.github.ben-manes.versions' version "$benManesPluginVersion"
 }
-apply from: "$rootDir/gradle/publishing.gradle"
 group 'ru.iopump.kotest'
+
+apply from: "$rootDir/gradle/publishing.gradle"
 idea { module { downloadJavadoc = true; downloadSources = true } }
 compileKotlin {
     sourceCompatibility = JavaVersion.VERSION_1_8
