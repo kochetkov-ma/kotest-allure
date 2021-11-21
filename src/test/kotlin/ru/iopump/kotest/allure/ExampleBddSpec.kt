@@ -25,10 +25,10 @@ import ru.iopump.kotest.allure.annotation.KJiras
 """
 )
 @Issues(
-        value = [Issue("TTT-666"), Issue("TTT-777")]
+    value = [Issue("TTT-666"), Issue("TTT-777")]
 )
 @KJiras(
-        value = [KJira("TTT-111"), KJira("TTT-000")]
+    value = [KJira("TTT-111"), KJira("TTT-000")]
 )
 class ExampleBddSpec : BehaviorSpec() {
 

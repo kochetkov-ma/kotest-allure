@@ -1,6 +1,5 @@
 package ru.iopump.kotest.allure
 
-import io.kotest.core.config.ExperimentalKotest
 import io.kotest.core.spec.style.FreeSpec
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
@@ -10,7 +9,6 @@ import io.qameta.allure.Feature
 
 @Epic("Allure feature annotation on test class")
 @Feature("Concurrency")
-@ExperimentalKotest
 class BigSpecSpec : FreeSpec() {
 
     override fun concurrency(): Int = 2

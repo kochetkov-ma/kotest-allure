@@ -27,5 +27,5 @@ jobs:
         -PossrhUsername=kochetkov-ma
         -PossrhPassword=${{ secrets.ossrhPassword }}
         -x test
-        uploadArchives
+        publish
         closeAndReleaseRepository'

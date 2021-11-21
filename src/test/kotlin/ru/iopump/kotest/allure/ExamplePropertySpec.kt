@@ -7,7 +7,6 @@ import io.kotest.property.checkAll
 import io.qameta.allure.Epic
 import io.qameta.allure.Feature
 
-
 @Epic("Allure feature annotation on test class")
 @Feature("Data Driven")
 class ExamplePropertySpec : FreeSpec() {
