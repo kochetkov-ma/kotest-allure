@@ -7,6 +7,7 @@ plugins {
     id 'io.qameta.allure' version "$allurePluginVersion"
     id 'io.codearte.nexus-staging' version "$nexusStagingPluginVersion"
     id 'com.github.ben-manes.versions' version "$benManesPluginVersion"
+    id 'ru.iopump.qa.allure' version "$allureServerPluginVersion"
 }
 group 'ru.iopump.kotest'
 
@@ -50,4 +51,8 @@ task cleanAllureResult {
     doLast {
         delete "$buildDir/allure-results"
     }
+}
+allureServer {
+    relativeResultDir = 'build/allure-results'
+    allureServerUrl = 'https://allure.iopump.ru'
 }

@@ -23,7 +23,8 @@ dependencies {
 }
 ```
 
-Allure Listener has annotation `@AutoScan` that's why not necessary to enable this Listener explicitly.  
+Allure `TestListener` (and `Extension`) has annotation `@AutoScan` that's why not necessary to enable this Listener
+explicitly.  
 Also, it provides necessary `allure common libs` but doesn't offer Kotest dependency.
 
 ### Results
@@ -168,10 +169,18 @@ There is a full setting table. All settings adjust by system variable:
 Because the listener has annotation `@AutoScan` it can be duplicated when you specify it in Configuration like this:
 
 ```kotlin
-    override fun listeners(): List<Listener> = listOf(
+// Main functions as Listener
+override fun listeners(): List<Listener> = listOf(
+    KotestAllureListener
+)
+
+// Support skipped test step as Extension
+override fun extensions(): List<Extension> = listOf(
     KotestAllureListener
 )
 ```
+
+> For support to display skipped test step in report KotestAllureListener also implement Extension `interface`
 
 You should delete `KotestAllureListener` or other Allure Listeners from any configuration classes. Check you
 dependencies - it must contain the only allure extension `ru.iopump.kotest:kotest-allure`

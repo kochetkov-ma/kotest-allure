@@ -1,5 +1,7 @@
 package ru.iopump.kotest.allure
 
+import io.kotest.core.extensions.TestCaseExtension
+import io.kotest.core.internal.isEnabled
 import io.kotest.core.listeners.ProjectListener
 import io.kotest.core.listeners.TestListener
 import io.kotest.core.spec.AutoScan
@@ -26,8 +28,10 @@ import kotlin.reflect.KClass
  * See
  */
 @AutoScan
-object KotestAllureListener : ProjectListener, TestListener {
+object KotestAllureListener : ProjectListener, TestListener, TestCaseExtension {
+
     internal val log = logger<KotestAllureListener>()
+
     override val name: String = "kotest_allure_listener"
 
     override suspend fun beforeProject() {
@@ -93,9 +97,40 @@ object KotestAllureListener : ProjectListener, TestListener {
         else stopStep(testCase, result)
     }
 
+    /**
+     * Process skipped TestCase/Test Step.
+     */
+    override suspend fun intercept(testCase: TestCase, execute: suspend (TestCase) -> TestResult): TestResult {
+        val skipped = testCase.isSkipped()
+
+        if (skipped) {
+            debug("beforeInvocation on skipped test - $testCase")
+            beforeEach(testCase)
+        }
+        val executionResult = execute(testCase)
+        if (skipped) afterEach(testCase, executionResult)
+
+        return executionResult
+    }
+
+    /**
+     * There is a special flow if all tests in Spec are skipped in spec.
+     */
+    override suspend fun specIgnored(spec: Spec, results: Map<TestCase, TestResult>) {
+        debug("specIgnored - $spec")
+
+        results.forEach { (tc, result) ->
+            beforeEach(tc)
+            afterEach(tc, result)
+        }
+    }
+
     /////////////////
     //// PRIVATE ////
     /////////////////
 
+    private suspend fun TestCase.isSkipped() = isEnabled().isEnabled.not()
+
     private fun debug(msg: String) = if (log.isDebugEnabled) log.debug(msg) else null
+
 }
