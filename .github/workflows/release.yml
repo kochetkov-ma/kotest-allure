@@ -8,10 +8,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Print information
-        run: echo Current build = ${{ github.head_ref }}
       - name: Checkout
         uses: actions/checkout@v2
+      - name: Set RELEASE_VERSION
+        run: echo ::set-env name=RELEASE_VERSION::${GITHUB_REF##v}
+        env:
+          ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true'
+      - name: Print information
+        run: echo "Build = ${{ github.head_ref }}. Version = ${{ env.RELEASE_VERSION }}"
       - name: Set up JDK
         uses: actions/setup-java@v1
         with:
@@ -25,6 +29,7 @@ jobs:
         with:
           gradle-version: 6.8.3
           arguments: '--info --stacktrace
+        -Pversion=${{ env.RELEASE_VERSION }}
         -Psigning.password=${{ secrets.GPG_SIGNING_PASSWORD }}
         -PossrhUsername=kochetkov-ma
         -PossrhPassword=${{ secrets.ossrhPassword }}
