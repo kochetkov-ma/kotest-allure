@@ -27,7 +27,7 @@ jobs:
           GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
         uses: eskatos/gradle-command-action@v1
         with:
-          gradle-version: 6.8.3
+          gradle-version: 7.4.2
           arguments: '--info --stacktrace
         -Pversion=${{ env.RELEASE_VERSION }}
         -Psigning.password=${{ secrets.GPG_SIGNING_PASSWORD }}
