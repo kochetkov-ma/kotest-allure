@@ -1,7 +1,7 @@
 package ru.iopump.kotest.allure.helper
 
+import io.kotest.core.descriptors.Descriptor
 import io.kotest.core.spec.Spec
-import io.kotest.core.test.Description
 import io.qameta.allure.Epic
 import io.qameta.allure.Feature
 import io.qameta.allure.Issue
@@ -30,7 +30,7 @@ import kotlin.reflect.full.findAnnotation
 
 internal class AllureMetadata(
     private val specClass: KClass<out Spec>? = null,
-    private val description: Description? = null
+    private val description: Descriptor? = null
 ) {
 
     val epic: Label? = specClass?.findAnnotation<Epic>()?.let { createEpicLabel(it.value) }

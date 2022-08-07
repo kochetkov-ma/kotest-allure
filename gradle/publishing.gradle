@@ -30,7 +30,7 @@ def loadSigningKeyFromFile() {
 
 publishing {
     publications {
-        kotest5(MavenPublication) {
+        kotest(MavenPublication) {
             groupId = project.group
             artifactId = project.name
             from components.java
@@ -83,7 +83,7 @@ signing {
 
     logger.lifecycle('GPG signing key: {}', signingKeyText.take(100) + '******')
     useInMemoryPgpKeys(signingKeyText, signingPassword)
-    sign publishing.publications.kotest5
+    sign publishing.publications.kotest
 }
 
 nexusStaging {

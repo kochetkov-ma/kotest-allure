@@ -1,7 +1,7 @@
 package ru.iopump.kotest.allure.api
 
+import io.kotest.core.descriptors.Descriptor
 import io.kotest.core.spec.Spec
-import io.kotest.core.test.Description
 import io.kotest.core.test.TestCase
 import io.qameta.allure.Allure
 import io.qameta.allure.AllureLifecycle
@@ -64,12 +64,12 @@ object KotestAllureExecution {
      * See [setUpFixture]
      * See [tearDownFixture]
      */
-    val KClass<out Spec>.containerUuid get() = qualifiedName.safeFileName
+    val KClass<*>.containerUuid get() = qualifiedName.safeFileName
 
     /**
-     * The longest name for [TestCase.description]
+     * The longest name for [TestCase.descriptor]
      */
-    fun Description.bestName() = names().joinToString("_") { it.displayName }
+    fun Descriptor.bestName() = this.chain().joinToString("_") { it.id.value }
 
     /**
      * Create Set Up Fixture for [Spec]

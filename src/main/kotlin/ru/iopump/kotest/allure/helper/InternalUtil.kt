@@ -2,9 +2,15 @@ package ru.iopump.kotest.allure.helper
 
 import io.kotest.core.test.TestCase
 import io.kotest.core.test.TestResult
-import io.kotest.core.test.TestStatus
+import io.kotest.core.test.TestResult.Error
+import io.kotest.core.test.TestResult.Failure
+import io.kotest.core.test.TestResult.Ignored
+import io.kotest.core.test.TestResult.Success
 import io.qameta.allure.model.Label
 import io.qameta.allure.model.Status
+import io.qameta.allure.model.Status.BROKEN
+import io.qameta.allure.model.Status.FAILED
+import io.qameta.allure.model.Status.PASSED
 import io.qameta.allure.model.StatusDetails
 import io.qameta.allure.util.ResultsUtils
 import org.opentest4j.TestAbortedException
@@ -16,13 +22,11 @@ import java.io.StringWriter
 import java.lang.System.getProperty
 import java.lang.System.getenv
 import java.math.BigDecimal
+import java.util.Locale
 import java.util.Optional
 import kotlin.reflect.full.isSubclassOf
 
 internal object InternalUtil {
-    private val skipOnFail = SKIP_ON_FAIL.prop(true)
-
-    private val AllureTestResult.isBad get() = status in arrayOf(Status.FAILED, Status.BROKEN)
 
     internal inline fun <reified T> T.toOptional() = Optional.ofNullable(this)
 
@@ -34,14 +38,14 @@ internal object InternalUtil {
 
     internal inline fun <reified T> String.prop(): T? = (
             getProperty(this)
-                ?: getProperty(toUpperCase())
-                ?: getProperty(toLowerCase())
+                ?: getProperty(uppercase(Locale.getDefault()))
+                ?: getProperty(lowercase(Locale.getDefault()))
                 ?: getenv(this)
-                ?: getenv(toUpperCase())
-                ?: getenv(toLowerCase())
+                ?: getenv(uppercase(Locale.getDefault()))
+                ?: getenv(lowercase(Locale.getDefault()))
                 ?: getenv(replace(".", "_"))
-                ?: getenv(replace(".", "_").toUpperCase())
-                ?: getenv(replace(".", "_").toLowerCase())
+                ?: getenv(replace(".", "_").uppercase(Locale.getDefault()))
+                ?: getenv(replace(".", "_").lowercase(Locale.getDefault()))
             )
         .smartCast()
 
@@ -60,17 +64,17 @@ internal object InternalUtil {
     internal val String?.safeFileName
         get() = this?.replace("[^\\sа-яА-Яa-zA-Z0-9]".toRegex(), "")
             ?.replace("\\s{2,}".toRegex(), "_")
-            ?.let { it.takeIf { it.length <= 130 } ?: it.take(120) + it.hashCode() } ?: "null"
+            ?.let { it.takeIf { it.length <= 130 } ?: (it.take(120) + it.hashCode()) } ?: "null"
 
     internal fun TestResult.toAllure(): Pair<Status, StatusDetails> {
-        val status = when (this.status) {
-            TestStatus.Error -> Status.BROKEN
-            TestStatus.Failure -> Status.FAILED
-            TestStatus.Ignored -> Status.SKIPPED
-            TestStatus.Success -> Status.PASSED
+        val status = when (this) {
+            is Error -> BROKEN
+            is Failure -> FAILED
+            is Ignored -> Status.SKIPPED
+            is Success -> PASSED
         }
 
-        val details = this.error?.let { throwable ->
+        val details = this.errorOrNull?.let { throwable ->
             StatusDetails().apply {
                 this.message = throwable.toString()
                 this.trace = throwable.readStackTrace()
@@ -85,36 +89,44 @@ internal object InternalUtil {
         val index = "$i".takeIf { i >= 1 }.orEmpty()
         uuid = testUuid
 
-        name = test.description.name.name + suffix
+        name = test.name.testName + suffix
         description = meta.allDescriptions
 
-        fullName = test.description.bestName() + index
-        testCaseId = test.description.testId.value + index
-        historyId = test.description.bestName() + index
+        fullName = test.descriptor.bestName() + index
+        testCaseId = test.descriptor.id.value + index
+        historyId = test.descriptor.bestName() + index
         labels = testCaseLabels(test, meta)
         links = meta.allLinks
     }
 
     internal fun AllureStepResult.updateStepResult(testCase: TestCase, metadata: AllureMetadata) {
-        name = testCase.description.name.name
+        name = testCase.name.testName
         description = metadata.allDescriptions
     }
 
     internal fun AllureTestResult.updateStatus(statusAndDetails: Pair<Status, StatusDetails>) {
+        // Kotest 5.4.X listener doesn't take into account child steps results.
+        // We should find previous fail / broken child steps in ALLURE storage and use it on top
+        val closestPreviousErrorOrBrokenStatusAndDetails: Pair<Status, StatusDetails> =
+            steps.map { it.status to it.statusDetails }.lastOrNull { it.first.isBrokenOrFailed } ?: statusAndDetails
+
+        val effectiveStatusAndDetails =
+            if (statusAndDetails.first.isNotPassed) statusAndDetails else closestPreviousErrorOrBrokenStatusAndDetails
+
         val currentStatus = this.status
         val needUpdate = currentStatus == null  // если еще нет статуса
-                || currentStatus == Status.PASSED  // если текущий статус пройден
+                || currentStatus == PASSED  // если текущий статус пройден
                 || currentStatus == Status.SKIPPED // если статус пропущен
         if (needUpdate) {
-            this.status = statusAndDetails.first
-            this.statusDetails = statusAndDetails.second
+            this.status = effectiveStatusAndDetails.first
+            this.statusDetails = effectiveStatusAndDetails.second
         }
     }
 
     internal fun AllureStepResult.updateStatus(statusAndDetails: Pair<Status, StatusDetails>) {
         val currentStatus = this.status
         val needUpdate = currentStatus == null // если еще нет статуса
-                || currentStatus == Status.PASSED // если текущий статус пройден
+                || currentStatus == PASSED // если текущий статус пройден
                 || currentStatus == Status.SKIPPED // если статус пропущен
         if (needUpdate) {
             this.status = statusAndDetails.first
@@ -136,6 +148,16 @@ internal object InternalUtil {
     //// PRIVATE ////
     /////////////////
 
+    private val brokenOrFailed: Array<Status> = arrayOf(BROKEN, FAILED)
+
+    private val skipOnFail: Boolean = SKIP_ON_FAIL.prop(true)
+
+    private val AllureTestResult.isBad: Boolean get() = status?.isBrokenOrFailed ?: false
+
+    private val Status?.isBrokenOrFailed: Boolean get() = this in brokenOrFailed
+
+    private val Status?.isNotPassed get() = this != PASSED
+
     private fun Throwable.readStackTrace(): String {
         val stringWriter = StringWriter()
         PrintWriter(stringWriter).use { printWriter -> printStackTrace(printWriter) }
@@ -146,7 +168,7 @@ internal object InternalUtil {
         val pkgName = testCase.spec::class.java.`package`.name
 
         return listOfNotNull(
-            ResultsUtils.createSuiteLabel(testCase.description.spec().displayName()),
+            ResultsUtils.createSuiteLabel(testCase.descriptor.spec().id.value),
             ResultsUtils.createThreadLabel(),
             ResultsUtils.createHostLabel(),
             ResultsUtils.createLanguageLabel("kotlin"),
