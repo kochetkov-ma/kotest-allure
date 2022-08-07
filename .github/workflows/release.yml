@@ -33,6 +33,4 @@ jobs:
         -Psigning.password=${{ secrets.GPG_SIGNING_PASSWORD }}
         -PossrhUsername=kochetkov-ma
         -PossrhPassword=${{ secrets.ossrhPassword }}
-        -x test
-        publish
-        closeAndReleaseRepository'
+        -x test publish closeAndReleaseRepository --no-build-cache --rerun-tasks'
