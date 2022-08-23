@@ -1,5 +1,6 @@
 package ru.iopump.kotest.allure.helper
 
+import io.kotest.core.test.Description
 import io.kotest.core.test.TestCase
 import io.kotest.core.test.TestResult
 import io.kotest.core.test.TestStatus
@@ -11,6 +12,7 @@ import org.opentest4j.TestAbortedException
 import org.slf4j.LoggerFactory
 import ru.iopump.kotest.allure.api.KotestAllureConstant.VAR.SKIP_ON_FAIL
 import ru.iopump.kotest.allure.api.KotestAllureExecution.bestName
+import ru.iopump.kotest.allure.api.KotestAllureExecution.uuid
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.lang.System.getProperty
@@ -57,11 +59,6 @@ internal object InternalUtil {
             else -> this as T
         }
 
-    internal val String?.safeFileName
-        get() = this?.replace("[^\\sа-яА-Яa-zA-Z0-9]".toRegex(), "")
-            ?.replace("\\s{2,}".toRegex(), "_")
-            ?.let { it.takeIf { it.length <= 130 } ?: it.take(120) + it.hashCode() } ?: "null"
-
     internal fun TestResult.toAllure(): Pair<Status, StatusDetails> {
         val status = when (this.status) {
             TestStatus.Error -> Status.BROKEN
@@ -80,20 +77,32 @@ internal object InternalUtil {
         return status to details
     }
 
-    internal fun AllureTestResult.updateTestResult(testUuid: String, test: TestCase, meta: AllureMetadata, i: Int = 0) {
-        val suffix = " [$i]".takeIf { i >= 1 }.orEmpty()
-        val index = "$i".takeIf { i >= 1 }.orEmpty()
+    internal fun AllureTestResult.updateTestResult(
+        testUuid: String,
+        test: TestCase,
+        meta: AllureMetadata,
+        iteration: Int = 0
+    ) {
         uuid = testUuid
 
-        name = test.description.name.name + suffix
+        name = test.description.displayNameWithIterationSuffix(iteration)
         description = meta.allDescriptions
 
-        fullName = test.description.bestName() + index
-        testCaseId = test.description.testId.value + index
-        historyId = test.description.bestName() + index
+        fullName = test.description.bestName().withIterationSuffix(iteration)
+        testCaseId = test.description.testId.value.withIterationSuffix(iteration)
+        historyId = test.description.bestName().withIterationSuffix(iteration)
         labels = testCaseLabels(test, meta)
         links = meta.allLinks
     }
+
+    internal fun Description.displayNameWithIterationSuffix(iteration: Int = 0) =
+        name.name + " [$iteration]".takeIf { iteration >= 1 }.orEmpty()
+
+    private fun String.withIterationSuffix(iteration: Int = 0) =
+        this + "$iteration".takeIf { iteration >= 1 }.orEmpty()
+
+    internal fun Description.containerUuidWithIteration(iteration: Int = 0) =
+        bestName().withIterationSuffix(iteration).uuid()
 
     internal fun AllureStepResult.updateStepResult(testCase: TestCase, metadata: AllureMetadata) {
         name = testCase.description.name.name

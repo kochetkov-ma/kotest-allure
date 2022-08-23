@@ -12,11 +12,14 @@ import ru.iopump.kotest.allure.api.KotestAllureConstant.VAR
 import ru.iopump.kotest.allure.api.KotestAllureExecution.PROJECT_UUID
 import ru.iopump.kotest.allure.api.KotestAllureExecution.containerUuid
 import ru.iopump.kotest.allure.api.KotestAllureExecution.setUpFixture
+import ru.iopump.kotest.allure.helper.InternalExecutionModel.currentIterationIndex
+import ru.iopump.kotest.allure.helper.InternalUtil.containerUuidWithIteration
 import ru.iopump.kotest.allure.helper.InternalUtil.logger
 import ru.iopump.kotest.allure.helper.InternalUtil.prop
-import ru.iopump.kotest.allure.helper.InternalUtil.safeFileName
+import ru.iopump.kotest.allure.helper.KotestTestCase
 import java.io.File
 import java.util.UUID
+import kotlin.math.absoluteValue
 import kotlin.reflect.KClass
 
 /**
@@ -26,6 +29,11 @@ import kotlin.reflect.KClass
  */
 object KotestAllureExecution {
     private val log = logger<KotestAllureExecution>()
+
+    /**
+     * You may set PROJECT_NAME for unique PROJECT_UUID
+     */
+    lateinit var PROJECT_NAME: String
 
     /**
      * Get current [AllureLifecycle] or extended version for example [Slf4JAllureLifecycle]
@@ -39,7 +47,9 @@ object KotestAllureExecution {
      * See [tearDownFixture]
      * See [EXECUTION_START_CALLBACK]
      */
-    val PROJECT_UUID = KotestAllureListener.hashCode().toString()
+    val PROJECT_UUID =
+        if (this::PROJECT_NAME.isInitialized) PROJECT_NAME.uuid()
+        else KotestAllureListener.hashCode().absoluteValue.toString()
 
     /**
      * Use to add project level Fixture.
@@ -59,17 +69,30 @@ object KotestAllureExecution {
     val Spec.containerUuid get() = this::class.containerUuid
 
     /**
+     * Content based UUID.
+     */
+    fun String?.uuid() = UUID.nameUUIDFromBytes((this ?: "null").toByteArray()).toString()
+
+    /**
      * Get container uuid of [Spec] class
      *
      * See [setUpFixture]
      * See [tearDownFixture]
      */
-    val KClass<out Spec>.containerUuid get() = qualifiedName.safeFileName
+    val KClass<out Spec>.containerUuid get() = qualifiedName.uuid()
 
     /**
      * The longest name for [TestCase.description]
      */
     fun Description.bestName() = names().joinToString("_") { it.displayName }
+
+    /**
+     * Get container uuid of test [Description]
+     *
+     * See [setUpFixture]
+     * See [tearDownFixture]
+     */
+    val Description.containerUuid: String get() = containerUuidWithIteration(currentIterationIndex())
 
     /**
      * Create Set Up Fixture for [Spec]
@@ -79,6 +102,15 @@ object KotestAllureExecution {
         atomic: Boolean = true,
         fixtureResult: FixtureResult.() -> Unit = {}
     ) = this::class.setUpFixture(name, atomic, fixtureResult)
+
+    /**
+     * Create Set Up Fixture for Scenario [KotestTestCase]
+     */
+    fun KotestTestCase.setUpFixture(
+        name: String,
+        atomic: Boolean = true,
+        fixtureResult: FixtureResult.() -> Unit = {}
+    ) = description.containerUuid.setUpFixture(name, atomic, fixtureResult)
 
     /**
      * Create Set Up Fixture for [Spec]
@@ -119,6 +151,15 @@ object KotestAllureExecution {
         atomic: Boolean = true,
         fixtureResult: FixtureResult.() -> Unit = {}
     ) = this::class.tearDownFixture(name, atomic, fixtureResult)
+
+    /**
+     * Create Tear Down Fixture for Scenario [KotestTestCase]
+     */
+    fun KotestTestCase.tearDownFixture(
+        name: String,
+        atomic: Boolean = true,
+        fixtureResult: FixtureResult.() -> Unit = {}
+    ) = description.containerUuid.tearDownFixture(name, atomic, fixtureResult)
 
     /**
      * Create Tear Down Fixture for [Spec]
