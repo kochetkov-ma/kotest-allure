@@ -91,9 +91,9 @@ internal object InternalUtil {
         name = test.name.testName.allureMetaCleanUp() + suffix
         description = meta.allDescriptions
 
-        fullName = test.descriptor.bestName() + index
-        testCaseId = test.descriptor.id.value + index
-        historyId = test.descriptor.bestName() + index
+        fullName = test.descriptor.bestName().allureMetaCleanUp() + index
+        testCaseId = test.descriptor.id.value.allureMetaCleanUp() + index
+        historyId = test.descriptor.bestName().allureMetaCleanUp() + index
         labels = testCaseLabels(test, meta)
         links = meta.allLinks
     }

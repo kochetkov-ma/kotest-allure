@@ -200,20 +200,19 @@ Allure results directory specified by system env `allure.results.directory` will
 feature disabled by default.  
 You may enable by system env `allure.results.directory.clear`.
 
-### Clean Up Allure metadata from `Test Names` ⚡NEW⚡
+### Clean up allure metadata from `Test Names` ⚡NEW⚡
 ```kotlin
 class ExampleDataDrivenSpec : FreeSpec({
         "Scenario [J-100] (T-3) #999" - { }
     })
 ```
-will be without `[J-100] (T-3) #999`
-```kotlin
-class ExampleDataDrivenSpec : FreeSpec({
-        "Scenario" - { }
-    })
-```
+will be without `[J-100] (T-3) #999` in report
 
-But, if some undetectable result you may disable it by `kotest.allure.meta.cleanup` system or env variable
+![img.png](img.png)  
+![img_2.png](img_2.png)
+
+
+But, if some unexpected result you may disable it by `kotest.allure.meta.cleanup` system or env variable
 
 ## Settings
 
