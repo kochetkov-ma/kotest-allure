@@ -21,6 +21,7 @@ import ru.iopump.kotest.allure.helper.InternalUtil.toOptional
 import ru.iopump.kotest.allure.helper.InternalUtil.updateStatus
 import ru.iopump.kotest.allure.helper.InternalUtil.updateStepResult
 import ru.iopump.kotest.allure.helper.InternalUtil.updateTestResult
+import ru.iopump.kotest.allure.helper.meta.AllureMetadata
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Duration.Companion.milliseconds

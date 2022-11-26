@@ -2,31 +2,30 @@ package ru.iopump.kotest.allure.helper
 
 import io.kotest.core.test.TestCase
 import io.kotest.core.test.TestResult
-import io.kotest.core.test.TestResult.Error
-import io.kotest.core.test.TestResult.Failure
-import io.kotest.core.test.TestResult.Ignored
-import io.kotest.core.test.TestResult.Success
+import io.kotest.core.test.TestResult.*
 import io.qameta.allure.model.Label
 import io.qameta.allure.model.Status
-import io.qameta.allure.model.Status.BROKEN
-import io.qameta.allure.model.Status.FAILED
-import io.qameta.allure.model.Status.PASSED
+import io.qameta.allure.model.Status.*
 import io.qameta.allure.model.StatusDetails
 import io.qameta.allure.util.ResultsUtils
 import org.opentest4j.TestAbortedException
 import org.slf4j.LoggerFactory
+import ru.iopump.kotest.allure.api.KotestAllureConstant
 import ru.iopump.kotest.allure.api.KotestAllureConstant.VAR.SKIP_ON_FAIL
+import ru.iopump.kotest.allure.api.KotestAllureConstant.VAR.TEST_NAME_AUTO_CLEAN_UP
 import ru.iopump.kotest.allure.api.KotestAllureExecution.bestName
+import ru.iopump.kotest.allure.helper.meta.AllureMetadata
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.lang.System.getProperty
 import java.lang.System.getenv
 import java.math.BigDecimal
-import java.util.Locale
-import java.util.Optional
+import java.util.*
 import kotlin.reflect.full.isSubclassOf
 
 internal object InternalUtil {
+
+    private val isAllureMetaCleanUp = TEST_NAME_AUTO_CLEAN_UP.prop(true)
 
     internal inline fun <reified T> T.toOptional() = Optional.ofNullable(this)
 
@@ -37,16 +36,16 @@ internal object InternalUtil {
     internal inline fun <reified T> String.prop(default: T): T = prop() ?: default
 
     internal inline fun <reified T> String.prop(): T? = (
-            getProperty(this)
-                ?: getProperty(uppercase(Locale.getDefault()))
-                ?: getProperty(lowercase(Locale.getDefault()))
-                ?: getenv(this)
-                ?: getenv(uppercase(Locale.getDefault()))
-                ?: getenv(lowercase(Locale.getDefault()))
-                ?: getenv(replace(".", "_"))
-                ?: getenv(replace(".", "_").uppercase(Locale.getDefault()))
-                ?: getenv(replace(".", "_").lowercase(Locale.getDefault()))
-            )
+        getProperty(this)
+            ?: getProperty(uppercase(Locale.getDefault()))
+            ?: getProperty(lowercase(Locale.getDefault()))
+            ?: getenv(this)
+            ?: getenv(uppercase(Locale.getDefault()))
+            ?: getenv(lowercase(Locale.getDefault()))
+            ?: getenv(replace(".", "_"))
+            ?: getenv(replace(".", "_").uppercase(Locale.getDefault()))
+            ?: getenv(replace(".", "_").lowercase(Locale.getDefault()))
+        )
         .smartCast()
 
     internal inline fun <reified T> Any?.smartCast(): T? =
@@ -70,7 +69,7 @@ internal object InternalUtil {
         val status = when (this) {
             is Error -> BROKEN
             is Failure -> FAILED
-            is Ignored -> Status.SKIPPED
+            is Ignored -> SKIPPED
             is Success -> PASSED
         }
 
@@ -89,7 +88,7 @@ internal object InternalUtil {
         val index = "$i".takeIf { i >= 1 }.orEmpty()
         uuid = testUuid
 
-        name = test.name.testName + suffix
+        name = test.name.testName.allureMetaCleanUp() + suffix
         description = meta.allDescriptions
 
         fullName = test.descriptor.bestName() + index
@@ -115,8 +114,8 @@ internal object InternalUtil {
 
         val currentStatus = this.status
         val needUpdate = currentStatus == null  // если еще нет статуса
-                || currentStatus == PASSED  // если текущий статус пройден
-                || currentStatus == Status.SKIPPED // если статус пропущен
+            || currentStatus == PASSED  // если текущий статус пройден
+            || currentStatus == SKIPPED // если статус пропущен
         if (needUpdate) {
             this.status = effectiveStatusAndDetails.first
             this.statusDetails = effectiveStatusAndDetails.second
@@ -126,8 +125,8 @@ internal object InternalUtil {
     internal fun AllureStepResult.updateStatus(statusAndDetails: Pair<Status, StatusDetails>) {
         val currentStatus = this.status
         val needUpdate = currentStatus == null // если еще нет статуса
-                || currentStatus == PASSED // если текущий статус пройден
-                || currentStatus == Status.SKIPPED // если статус пропущен
+            || currentStatus == PASSED // если текущий статус пройден
+            || currentStatus == SKIPPED // если статус пропущен
         if (needUpdate) {
             this.status = statusAndDetails.first
             this.statusDetails = statusAndDetails.second
@@ -147,6 +146,14 @@ internal object InternalUtil {
     /////////////////
     //// PRIVATE ////
     /////////////////
+
+    private fun String.allureMetaCleanUp() =
+        if (isAllureMetaCleanUp)
+            replace(KotestAllureConstant.JIRA.PATTERN, "")
+                .replace(KotestAllureConstant.TMS.PATTERN, "")
+                .replace(KotestAllureConstant.ALLURE_ID.PATTERN, "")
+                .trim()
+        else this
 
     private val brokenOrFailed: Array<Status> = arrayOf(BROKEN, FAILED)
 
@@ -173,12 +180,7 @@ internal object InternalUtil {
             ResultsUtils.createHostLabel(),
             ResultsUtils.createLanguageLabel("kotlin"),
             ResultsUtils.createFrameworkLabel("kotest"),
-            ResultsUtils.createPackageLabel(pkgName),
-            metadata.epic ?: ResultsUtils.createEpicLabel(pkgName),
-            metadata.story,
-            metadata.feature,
-            metadata.severity,
-            metadata.owner
-        )
+            ResultsUtils.createPackageLabel(pkgName)
+        ).plus(metadata.allLabels)
     }
 }

@@ -8,6 +8,9 @@ import io.qameta.allure.AllureLifecycle
 import io.qameta.allure.model.FixtureResult
 import io.qameta.allure.model.Status
 import ru.iopump.kotest.allure.KotestAllureListener
+import ru.iopump.kotest.allure.api.KotestAllureConstant.ALLURE_ID
+import ru.iopump.kotest.allure.api.KotestAllureConstant.JIRA
+import ru.iopump.kotest.allure.api.KotestAllureConstant.TMS
 import ru.iopump.kotest.allure.api.KotestAllureConstant.VAR
 import ru.iopump.kotest.allure.api.KotestAllureExecution.PROJECT_UUID
 import ru.iopump.kotest.allure.api.KotestAllureExecution.containerUuid
@@ -16,7 +19,7 @@ import ru.iopump.kotest.allure.helper.InternalUtil.logger
 import ru.iopump.kotest.allure.helper.InternalUtil.prop
 import ru.iopump.kotest.allure.helper.InternalUtil.safeFileName
 import java.io.File
-import java.util.UUID
+import java.util.*
 import kotlin.reflect.KClass
 
 /**
@@ -151,10 +154,41 @@ object KotestAllureExecution {
         return uuid
     }
 
+    /**
+     * Add TMS key to test name.
+     * @see KotestAllureConstant.TMS
+     */
+    fun String.tms(tmsKey: String) = "$this($tmsKey)"
+        .shouldBeDefaultPattern(TMS.PATTERN.pattern, TMS.PATTERN_DEFAULT, "tms", "allure.tms.pattern")
+
+    /**
+     * Add ISSUE key to test name.
+     * @see KotestAllureConstant.JIRA
+     */
+    fun String.task(issueKey: String) = "$this[$issueKey]"
+        .shouldBeDefaultPattern(JIRA.PATTERN.pattern, JIRA.PATTERN_DEFAULT, "issue", "allure.jira.pattern")
+
+    /**
+     * Add AllureID (TestOps) key to test name.
+     * @see KotestAllureConstant.ALLURE_ID
+     */
+    fun String.allureId(allureId: String) = "$this#$allureId"
+        .shouldBeDefaultPattern(ALLURE_ID.PATTERN.pattern, ALLURE_ID.PATTERN_DEFAULT, "allureId", "allure.id.pattern")
+
     /////////////////
     //// PRIVATE ////
     /////////////////
 
+    private fun String.shouldBeDefaultPattern(yourPattern: String, defaultPattern: String, funName: String, varName: String) = 
+        if (yourPattern != defaultPattern) error(yourPattern, defaultPattern, funName, varName) else this
+    
+    private fun error(yourPattern: String, defaultPattern: String, funName: String, varName: String): Nothing = 
+        throw UnsupportedOperationException(
+            "You must use this function '$funName' only with default patter '$varName=$defaultPattern'. " +
+                "But you have changed default pattern '$varName=$yourPattern' " +
+                "You should implement your own 'fun String.${funName}My(key: String)' extension function"
+        )
+    
     private fun initAllureLifecycle(): AllureLifecycle {
         val resultDir = VAR.ALLURE_RESULTS_DIR.prop("build/allure-results")
         val slf4jEnabled = VAR.ALLURE_SLF4J_LOG.prop(true)

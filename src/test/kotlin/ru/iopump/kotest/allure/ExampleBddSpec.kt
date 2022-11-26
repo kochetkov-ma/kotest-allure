@@ -33,7 +33,7 @@ import ru.iopump.kotest.allure.annotation.KJiras
 class ExampleBddSpec : BehaviorSpec() {
 
     init {
-        Given("[PRJ-100] Start kotest specification Scenario") {
+        Given("[PRJ-100] Start kotest specification Scenario #777") {
             forAll(row("FirstIterArg"), row("SecondIterArg")) { arg ->
 
                 When("Start step 1 [PRJ-110] - $arg") {
