@@ -123,6 +123,13 @@ object KotestAllureConstant {
         const val DATA_DRIVEN_SUPPORT = "kotest.allure.data.driven"
 
         /**
+         *  Enable shouldThrow support: doesn't break test if step throws exception in shouldThrow block
+         *  
+         *  Default = true - enable. (disable it if face unexpected behavior)
+         */
+        const val STEP_SHOULD_THROW_SUPPORT = "kotest.allure.step.shouldThrow"
+        
+        /**
          * Clean all allure metadata (issue, tms, allureId) from test case name.
          *
          * `"My test name [JIRA-1](TMS-2)#3 - { ... }` - will be removed by patterns.
