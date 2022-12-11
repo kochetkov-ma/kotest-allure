@@ -7,7 +7,6 @@ import io.kotest.core.source.SourceRef.ClassSource
 import io.kotest.core.source.SourceRef.FileSource
 import io.kotest.core.source.SourceRef.None
 import io.kotest.core.test.TestResult.Success
-import io.kotest.core.test.TestStatus
 import io.qameta.allure.model.StepResult
 import ru.iopump.kotest.allure.KotestAllureListener.log
 import ru.iopump.kotest.allure.api.KotestAllureConstant.VAR.DATA_DRIVEN_SUPPORT
@@ -177,5 +176,5 @@ object InternalExecutionModel {
 
     private val KotestTestCase.parentUuid: String? get() = testUuidMap[descriptor.parent]
 
-    private val KotestTestResult.needPassOnTop: Boolean get() = status in arrayOf(TestStatus.Error, TestStatus.Failure)
+    private val KotestTestResult.needPassOnTop: Boolean get() = isErrorOrFailure
 }

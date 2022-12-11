@@ -12,6 +12,7 @@ import org.opentest4j.TestAbortedException
 import org.slf4j.LoggerFactory
 import ru.iopump.kotest.allure.api.KotestAllureConstant
 import ru.iopump.kotest.allure.api.KotestAllureConstant.VAR.SKIP_ON_FAIL
+import ru.iopump.kotest.allure.api.KotestAllureConstant.VAR.STEP_SHOULD_THROW_SUPPORT
 import ru.iopump.kotest.allure.api.KotestAllureConstant.VAR.TEST_NAME_AUTO_CLEAN_UP
 import ru.iopump.kotest.allure.api.KotestAllureExecution.bestName
 import ru.iopump.kotest.allure.helper.meta.AllureMetadata
@@ -26,6 +27,8 @@ import kotlin.reflect.full.isSubclassOf
 internal object InternalUtil {
 
     private val isAllureMetaCleanUp = TEST_NAME_AUTO_CLEAN_UP.prop(true)
+
+    private val isStepShouldThrowSupportEnabled = STEP_SHOULD_THROW_SUPPORT.prop(true)
 
     internal inline fun <reified T> T.toOptional() = Optional.ofNullable(this)
 
@@ -106,8 +109,9 @@ internal object InternalUtil {
     internal fun AllureTestResult.updateStatus(statusAndDetails: Pair<Status, StatusDetails>) {
         // Kotest 5.4.X listener doesn't take into account child steps results.
         // We should find previous fail / broken child steps in ALLURE storage and use it on top
-        val closestPreviousErrorOrBrokenStatusAndDetails: Pair<Status, StatusDetails> =
+        val closestPreviousErrorOrBrokenStatusAndDetails: Pair<Status, StatusDetails> = statusAndDetails.takeIf { isStepShouldThrowSupportEnabled }.let {
             steps.map { it.status to it.statusDetails }.lastOrNull { it.first.isBrokenOrFailed } ?: statusAndDetails
+        }
 
         val effectiveStatusAndDetails =
             if (statusAndDetails.first.isNotPassed) statusAndDetails else closestPreviousErrorOrBrokenStatusAndDetails

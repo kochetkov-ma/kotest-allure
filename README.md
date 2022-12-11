@@ -227,6 +227,7 @@ There is a full setting table. All settings adjust by system variable:
 | allure.slf4j.log               | duplicate allure step and attachment messages to Slf4j Logger                                                                                                         | true                   |
 | allure.lifecycle.class         | Set `AllureLifecycle` full class name                                                                                                                                 | `ru.iopump.kotest.allure.api.Slf4JAllureLifecycle`|
 | kotest.allure.data.driven      | Create new Allure test case on each new iteration in Data Driven tests or Property Testing                                                                            | true |
+| kotest.allure.step.shouldThrow ⚡NEW⚡     | Doesn't break test if step throws exception in shouldThrow block                                                                                                        | true |
 | kotest.allure.meta.cleanup ⚡NEW⚡     | Clean all allure metadata (issue, tms, allureId) from test case name. `"My test name [JIRA-1](TMS-2)#3 - { ... }` - will be cleaned up to `"My test name"` in report. | true |
 
 All variables are very flexible, for example: `allure.jira.pattern` == `allure_jira_pattern` == `ALLURE.JIRA.PATTERN` == `ALLURE_JIRA_PATTERN` as `ENV` or `SYS` variable
