@@ -1,19 +1,17 @@
 package ru.iopump.kotest.allure.helper
 
-import io.kotest.core.descriptors.Descriptor
-import io.kotest.core.descriptors.Descriptor.TestDescriptor
-import io.kotest.core.source.SourceRef
-import io.kotest.core.source.SourceRef.ClassSource
-import io.kotest.core.source.SourceRef.FileSource
-import io.kotest.core.source.SourceRef.None
-import io.kotest.core.test.TestResult.Success
+import io.kotest.core.test.Description
+import io.kotest.core.test.TestResult.Companion.success
 import io.kotest.core.test.TestStatus
 import io.qameta.allure.model.StepResult
+import io.qameta.allure.model.TestResultContainer
 import ru.iopump.kotest.allure.KotestAllureListener.log
 import ru.iopump.kotest.allure.api.KotestAllureConstant.VAR.DATA_DRIVEN_SUPPORT
 import ru.iopump.kotest.allure.api.KotestAllureExecution.ALLURE
 import ru.iopump.kotest.allure.api.KotestAllureExecution.containerUuid
 import ru.iopump.kotest.allure.helper.InternalExecutionModel.Iteration.Factory.scenario
+import ru.iopump.kotest.allure.helper.InternalUtil.containerUuidWithIteration
+import ru.iopump.kotest.allure.helper.InternalUtil.displayNameWithIterationSuffix
 import ru.iopump.kotest.allure.helper.InternalUtil.processSkipResult
 import ru.iopump.kotest.allure.helper.InternalUtil.prop
 import ru.iopump.kotest.allure.helper.InternalUtil.toAllure
@@ -21,20 +19,20 @@ import ru.iopump.kotest.allure.helper.InternalUtil.toOptional
 import ru.iopump.kotest.allure.helper.InternalUtil.updateStatus
 import ru.iopump.kotest.allure.helper.InternalUtil.updateStepResult
 import ru.iopump.kotest.allure.helper.InternalUtil.updateTestResult
-import ru.iopump.kotest.allure.helper.meta.AllureMetadata
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.time.Duration.Companion.milliseconds
 
 object InternalExecutionModel {
     private val dataDrivenSupport: Boolean = DATA_DRIVEN_SUPPORT.prop(true)
-    private val testUuidMap: MutableMap<Descriptor, String> = ConcurrentHashMap()
-    private val iterationMap: MutableMap<Descriptor, Iteration> = ConcurrentHashMap()
+    private val testUuidMap: MutableMap<Description, String> = ConcurrentHashMap()
+    private val iterationMap: MutableMap<Description, Iteration> = ConcurrentHashMap()
+
+    internal fun Description.currentIterationIndex(): Int = iterationMap[this]?.index ?: 0
 
     private data class Iteration(val index: Int, val scenario: KotestTestCase, var startLineNumber: Int) {
         val isNotStarted get() = startLineNumber <= 0
         fun start(step: KotestTestCase) {
-            startLineNumber = step.source.lineNumber()
+            startLineNumber = step.source.lineNumber
         }
 
         companion object Factory {
@@ -44,31 +42,39 @@ object InternalExecutionModel {
     }
 
     internal fun startScenario(testCase: KotestTestCase): String =
-        testUuidMap.computeIfAbsent(testCase.descriptor) { uuid() }
+        testUuidMap.computeIfAbsent(testCase.description) { uuid() }
             .also { uuid ->
                 val index = when (dataDrivenSupport) {
                     true -> iterationMap
-                        .compute(testCase.descriptor) { _, iteration -> scenario(testCase, iteration) }
+                        .compute(testCase.description) { _, iteration -> scenario(testCase, iteration) }
                         ?.index
                         ?.also { if (it >= 1) log.debug("New iteration has been started with index '$it'") }
                         ?: 0
                     false -> 0
                 }
-                val metadata = AllureMetadata(testCase.spec::class, testCase.descriptor)
+                val metadata = AllureMetadata(testCase.spec::class, testCase.description)
                 val result = AllureTestResult().apply { updateTestResult(uuid, testCase, metadata, index) }
-                ALLURE.scheduleTestCase(testCase.spec.containerUuid, result)
-                ALLURE.startTestCase(uuid)
+                TestResultContainer().also { containerResult ->
+                    containerResult.uuid = testCase.description.containerUuidWithIteration(index)
+                    containerResult.name = testCase.description.displayNameWithIterationSuffix(index)
+                    ALLURE.startTestContainer(testCase.spec.containerUuid, containerResult)
+                    ALLURE.scheduleTestCase(containerResult.uuid, result)
+                    ALLURE.startTestCase(uuid)
+                }
             }
 
     internal fun stopScenario(testCase: KotestTestCase, testResult: KotestTestResult, prune: Boolean = true) {
-        testUuidMap[testCase.descriptor].toOptional().ifPresentOrElse(
+        testUuidMap[testCase.description].toOptional().ifPresentOrElse(
             { uuid ->
                 ALLURE.updateTestCase(uuid) { it.updateStatus(testResult.toAllure()) }
                 ALLURE.stopTestCase(uuid)
                 ALLURE.writeTestCase(uuid)
+                val containerUuid = testCase.description.containerUuid
+                ALLURE.stopTestContainer(containerUuid)
+                ALLURE.writeTestContainer(containerUuid)
 
-                if (dataDrivenSupport && prune) iterationMap.remove(testCase.descriptor)
-                testUuidMap.remove(testCase.descriptor)
+                if (dataDrivenSupport && prune) iterationMap.remove(testCase.description)
+                testUuidMap.remove(testCase.description)
             },
             { log.error("Cannot stop Scenario '$testCase' because it hasn't been started") }
         )
@@ -97,7 +103,7 @@ object InternalExecutionModel {
                     iteration.start(testCase)
                 } else {
                     if (testCase.isNewIteration(iteration)) {
-                        stopScenario(iteration.scenario, Success(0.milliseconds), false)
+                        stopScenario(iteration.scenario, success(0), false)
                         startScenario(iteration.scenario)
                         iteration.start(testCase)
                     }
@@ -106,13 +112,13 @@ object InternalExecutionModel {
         }
 
     internal fun startStep(testCase: KotestTestCase) {
-        testUuidMap.computeIfAbsent(testCase.descriptor) { uuid() }
+        testUuidMap.computeIfAbsent(testCase.description) { uuid() }
             .also { uuid ->
                 if (dataDrivenSupport) processIteration(testCase)
                 testCase.parentUuid.toOptional()
                     .ifPresentOrElse(
                         { parentUuid ->
-                            val metadata = AllureMetadata(description = testCase.descriptor)
+                            val metadata = AllureMetadata(description = testCase.description)
                             val result = StepResult().also { it.updateStepResult(testCase, metadata) }
                             ALLURE.startStep(parentUuid, uuid, result)
                             processSkip(testCase)
@@ -123,14 +129,14 @@ object InternalExecutionModel {
     }
 
     internal fun stopStep(testCase: KotestTestCase, testResult: KotestTestResult) {
-        testUuidMap[testCase.descriptor].toOptional().ifPresentOrElse(
+        testUuidMap[testCase.description].toOptional().ifPresentOrElse(
             { uuid ->
                 testCase.parentUuid.toOptional().ifPresentOrElse(
                     {
                         ALLURE.updateStep(uuid) { it.updateStatus(testResult.toAllure()) }
                         ALLURE.stopStep(uuid)
                         if (testResult.needPassOnTop) {
-                            testCase.descriptor.parents().forEach { description ->
+                            testCase.description.parent.parents().forEach { description ->
                                 val updateFunction = { parentUuid: String ->
                                     if (description.isRootTest())
                                         ALLURE.updateTestCase(parentUuid) { it.updateStatus(testResult.toAllure()) }
@@ -140,7 +146,7 @@ object InternalExecutionModel {
                                 testUuidMap[description].toOptional().ifPresent(updateFunction)
                             }
                         }
-                        testUuidMap.remove(testCase.descriptor)
+                        testUuidMap.remove(testCase.description)
                     },
                     { stopScenario(testCase, testResult) }
                 )
@@ -153,29 +159,14 @@ object InternalExecutionModel {
     //// PRIVATE ////
     /////////////////
 
-    private fun SourceRef.lineNumber() = when (this) {
-        is None -> {
-            System.err.println(
-                "Cannot determine correct line number for DDT iteration! " +
-                        "You should add test sources to your project. " +
-                        "Or disable DATA_DRIVEN_SUPPORT > 'kotest.allure.data.driven=false'"
-            )
-            0
-        }
-        is FileSource -> lineNumber ?: 0
-        is ClassSource -> lineNumber ?: 0
-    }
-
     private fun uuid(): String = UUID.randomUUID().toString()
 
     private fun KotestTestCase.isNewIteration(iteration: Iteration): Boolean =
-        source.lineNumber() <= iteration.startLineNumber
+        source.lineNumber <= iteration.startLineNumber
 
-    private val KotestTestCase.scenario: Descriptor?
-        get() =
-            descriptor.parents().firstOrNull { it is TestDescriptor }
+    private val KotestTestCase.scenario: Description? get() = description.parent.parents().firstOrNull()
 
-    private val KotestTestCase.parentUuid: String? get() = testUuidMap[descriptor.parent]
+    private val KotestTestCase.parentUuid: String? get() = testUuidMap[description.parent]
 
     private val KotestTestResult.needPassOnTop: Boolean get() = status in arrayOf(TestStatus.Error, TestStatus.Failure)
 }

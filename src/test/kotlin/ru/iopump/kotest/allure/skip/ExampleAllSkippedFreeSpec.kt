@@ -3,6 +3,8 @@ package ru.iopump.kotest.allure.skip
 import io.kotest.core.spec.style.FreeSpec
 import io.kotest.data.forAll
 import io.kotest.data.row
+import io.qameta.allure.Epic
+import io.qameta.allure.Feature
 import io.qameta.allure.Link
 import io.qameta.allure.Links
 import ru.iopump.kotest.allure.attachText
@@ -10,6 +12,8 @@ import ru.iopump.kotest.allure.step1
 import ru.iopump.kotest.allure.step2
 import ru.iopump.kotest.allure.stepNested
 
+@Epic("Allure feature annotation on test class")
+@Feature("FreeSpec")
 @Links(
     value = [
         Link("iopump.ru"),

@@ -21,18 +21,19 @@ import ru.iopump.kotest.allure.api.KotestAllureExecution.tearDownFixture
 class ExampleStringSpec : StringSpec() {
 
     init {
-        setUpFixture("Set up testing fixture")
+        setUpFixture("Set up testing fixture SPEC ExampleStringSpec")
 
-        "Start kotest specification Scenario 2 #666" {
+        "Start kotest specification Scenario 2" {
             forAll(row("--1--"), row("--2--")) {
                 step1()
                 step2()
                 if (it == "--1--") {
+                    testCase.tearDownFixture("TearDown fixture for ERROR in integration $it")
                     stepException1()
                 }
             }
         }
 
-        tearDownFixture("Tear Down testing fixture")
+        tearDownFixture("Tear Down testing fixture  SPEC ExampleStringSpec")
     }
 }

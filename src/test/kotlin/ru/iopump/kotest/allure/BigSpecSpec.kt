@@ -3,7 +3,7 @@ package ru.iopump.kotest.allure
 import io.kotest.core.spec.style.FreeSpec
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
-import io.kotest.property.arbitrary.positiveInt
+import io.kotest.property.arbitrary.positiveInts
 import io.qameta.allure.Epic
 import io.qameta.allure.Feature
 
@@ -18,7 +18,7 @@ class BigSpecSpec : FreeSpec() {
 
             var expectedId = 0
             "Given test environment is up and test data prepared" {
-                expectedId = Arb.positiveInt().next()
+                expectedId = Arb.positiveInts().next()
             }
 
             "When client sent request to get the employee by id=$expectedId" { }

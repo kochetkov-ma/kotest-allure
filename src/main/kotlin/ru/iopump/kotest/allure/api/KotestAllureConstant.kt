@@ -9,13 +9,11 @@ import ru.iopump.kotest.allure.helper.InternalUtil.prop
 @Suppress("MemberVisibilityCanBePrivate")
 object KotestAllureConstant {
 
-    // TODO - Rename to TASK because not only JIRA
-    /**
-     * @see VAR.ALLURE_JIRA_PATTERN
-     */
     object JIRA {
 
         const val LINK_TYPE = "jira"
+        
+        const val LABEL_NAME = "jira"
 
         internal const val PATTERN_DEFAULT = "\\[([a-zA-Z]+-\\d+)]"
 
