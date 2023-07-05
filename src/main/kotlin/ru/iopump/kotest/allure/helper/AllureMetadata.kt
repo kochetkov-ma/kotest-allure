@@ -14,16 +14,11 @@ import io.qameta.allure.TmsLink
 import io.qameta.allure.TmsLinks
 import io.qameta.allure.model.Label
 import io.qameta.allure.model.Link
+import io.qameta.allure.util.AnnotationUtils.getLabels
 import io.qameta.allure.util.AnnotationUtils.getLinks
-import io.qameta.allure.util.ResultsUtils.createEpicLabel
-import io.qameta.allure.util.ResultsUtils.createFeatureLabel
-import io.qameta.allure.util.ResultsUtils.createLink
-import io.qameta.allure.util.ResultsUtils.createOwnerLabel
-import io.qameta.allure.util.ResultsUtils.createSeverityLabel
-import io.qameta.allure.util.ResultsUtils.createStoryLabel
-import ru.iopump.kotest.allure.annotation.KDescription
-import ru.iopump.kotest.allure.annotation.KJira
-import ru.iopump.kotest.allure.annotation.KJiras
+import io.qameta.allure.util.ResultsUtils.*
+import ru.iopump.kotest.allure.annotation.*
+import ru.iopump.kotest.allure.api.KotestAllureConstant
 import ru.iopump.kotest.allure.api.KotestAllureConstant.JIRA
 import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotation
@@ -50,6 +45,17 @@ internal class AllureMetadata(
         .distinctBy { it.url }
         .onEach { if (it.name.isBlank()) it.name = it.url }
         .distinct()
+        .toList()
+
+    val customLabels: List<Label> = (jiraLabel()
+            + jiraLabels()
+            + jiraLabelsFromName()
+            + allureIdLabel()
+            + allureIdsFromTestName()
+            + tagLabel()
+            + tagLabels()).asSequence()
+        .filterNot { it.value.isNullOrBlank() }
+        .distinctBy { it.name + it.value }
         .toList()
 
     val allDescriptions: String =
@@ -89,4 +95,41 @@ internal class AllureMetadata(
             else null
         }.toList()
     }
+
+    private fun jiraLabel(): Collection<Label> =
+        specClass?.findAnnotation<KJira>()?.let { getLabels(it) } ?: emptySet()
+
+    private fun jiraLabels(): Collection<Label> =
+        specClass?.findAnnotation<KJiras>()?.value?.let { getLabels(it.toSet()) } ?: emptySet()
+
+    private fun jiraLabelsFromName(): Collection<Label> {
+        if (description == null) return emptyList()
+        return JIRA.PATTERN.findAll(description.path().value).mapNotNull { result ->
+            if (result.groups.size >= 2)
+                result.groups[1]?.value?.takeIf { it.isNotBlank() }?.let { key ->
+                    createLabel(JIRA.LABEL_NAME, key)
+                }
+            else null
+        }.toList()
+    }
+
+    private fun allureIdsFromTestName(): Collection<Label> {
+        if (description == null) return emptyList()
+        return KotestAllureConstant.ALLURE_ID.PATTERN.findAll(description.path().value).mapNotNull { result ->
+            if (result.groups.size >= 2)
+                result.groups[1]?.value?.takeIf { it.isNotBlank() }?.let { key ->
+                    createLabel(ALLURE_ID_LABEL_NAME, key)
+                }
+            else null
+        }.toList()
+    }
+
+    private fun allureIdLabel(): Collection<Label> =
+        specClass?.findAnnotation<KAllureId>()?.let { getLabels(it) } ?: emptySet()
+
+    private fun tagLabel(): Collection<Label> =
+        specClass?.findAnnotation<KTag>()?.let { getLabels(it) } ?: emptySet()
+
+    private fun tagLabels(): Collection<Label> =
+        specClass?.findAnnotation<KTags>()?.value?.let { getLabels(it.toSet()) } ?: emptySet()
 }
