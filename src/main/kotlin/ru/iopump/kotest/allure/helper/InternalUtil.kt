@@ -166,6 +166,6 @@ internal object InternalUtil {
             metadata.feature,
             metadata.severity,
             metadata.owner
-        )
+        ).plus(metadata.customLabels)
     }
 }

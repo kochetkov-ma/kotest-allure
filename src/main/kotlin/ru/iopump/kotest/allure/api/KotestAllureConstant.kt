@@ -13,12 +13,24 @@ object KotestAllureConstant {
 
         const val LINK_TYPE = "jira"
 
+        const val LABEL_NAME = "jira"
+
         /**
          * Default Jira issue in Kotest Test name.
          * See [VAR.ALLURE_JIRA_PATTERN]
          */
         val PATTERN: Regex = VAR.ALLURE_JIRA_PATTERN.prop("\\[([a-zA-Z]+-\\d+)]").toRegex()
     }
+
+    object ALLURE_ID {
+        internal const val PATTERN_DEFAULT = "#(\\d+)"
+        /**
+         * Default AllureId (TestOps) in Kotest Test name.
+         * See [VAR.ALLURE_ID_PATTERN]
+         */
+        val PATTERN: Regex = VAR.ALLURE_ID_PATTERN.prop(PATTERN_DEFAULT).toRegex()
+    }
+
 
     /**
      * System or Environment variable name to configure the extension.
@@ -37,6 +49,12 @@ object KotestAllureConstant {
          * Default = '\[([a-zA-Z]+-\d+)]' like [KT-100]
          */
         const val ALLURE_JIRA_PATTERN = "allure.jira.pattern"
+
+        /**
+         * Set allure id (TestOps) pattern in Kotest Test name.
+         * Default = '#(\d+)' like `#777`
+         */
+        const val ALLURE_ID_PATTERN = "allure.id.pattern"
 
         /**
          * Result directory.
