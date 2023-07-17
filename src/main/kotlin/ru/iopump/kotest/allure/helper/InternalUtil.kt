@@ -89,7 +89,7 @@ internal object InternalUtil {
         description = meta.allDescriptions
 
         fullName = test.description.bestName().withIterationSuffix(iteration)
-        testCaseId = test.description.testId.value.withIterationSuffix(iteration)
+        testCaseId = test.description.bestName().withIterationSuffix(iteration)
         historyId = test.description.bestName().withIterationSuffix(iteration)
         labels = testCaseLabels(test, meta)
         links = meta.allLinks
