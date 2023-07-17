@@ -92,7 +92,7 @@ internal object InternalUtil {
         description = meta.allDescriptions
 
         fullName = test.descriptor.bestName().allureMetaCleanUp() + index
-        testCaseId = test.descriptor.id.value.allureMetaCleanUp() + index
+        testCaseId = test.descriptor.bestName().allureMetaCleanUp() + index
         historyId = test.descriptor.bestName().allureMetaCleanUp() + index
         labels = testCaseLabels(test, meta)
         links = meta.allLinks
