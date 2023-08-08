@@ -9,9 +9,7 @@ import io.qameta.allure.Issue
 import io.qameta.allure.Issues
 import io.qameta.allure.Link
 import io.qameta.allure.Links
-import ru.iopump.kotest.allure.annotation.KDescription
-import ru.iopump.kotest.allure.annotation.KJira
-import ru.iopump.kotest.allure.annotation.KJiras
+import ru.iopump.kotest.allure.annotation.*
 
 @Epic("Allure feature annotation on test class")
 @Feature("Behavior")
@@ -29,6 +27,11 @@ import ru.iopump.kotest.allure.annotation.KJiras
 )
 @KJiras(
     value = [KJira("TTT-111"), KJira("TTT-000")]
+)
+@KAllureId("888")
+@KTag("autotest")
+@KTags(
+    value = [KTag("auto"), KTag("test")]
 )
 class ExampleBddSpec : BehaviorSpec() {
 

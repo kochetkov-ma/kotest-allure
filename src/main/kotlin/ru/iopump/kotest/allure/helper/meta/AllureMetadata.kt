@@ -7,6 +7,7 @@ import io.qameta.allure.model.Link
 import ru.iopump.kotest.allure.helper.meta.AllureMetadataSupportDescriptions.kDescription
 import ru.iopump.kotest.allure.helper.meta.AllureMetadataSupportLabels.allureIdsFromTestName
 import ru.iopump.kotest.allure.helper.meta.AllureMetadataSupportLabels.epicFromPkg
+import ru.iopump.kotest.allure.helper.meta.AllureMetadataSupportLabels.jiraLabelsFromTestName
 import ru.iopump.kotest.allure.helper.meta.AllureMetadataSupportLabels.labelAnnotations
 import ru.iopump.kotest.allure.helper.meta.AllureMetadataSupportLabels.severity
 import ru.iopump.kotest.allure.helper.meta.AllureMetadataSupportLinks.issues
@@ -28,6 +29,7 @@ internal class AllureMetadata(
         add(specClass.severity)
         add(specClass.epicFromPkg)
         addAll(description.allureIdsFromTestName)
+        addAll(description.jiraLabelsFromTestName)
     }.filterNotNull()
 
     internal val allLinks: List<Link> = buildList {

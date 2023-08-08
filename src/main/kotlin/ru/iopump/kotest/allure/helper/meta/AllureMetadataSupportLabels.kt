@@ -8,6 +8,7 @@ import io.qameta.allure.model.Label
 import io.qameta.allure.util.AnnotationUtils
 import io.qameta.allure.util.ResultsUtils.*
 import ru.iopump.kotest.allure.api.KotestAllureConstant
+import ru.iopump.kotest.allure.api.KotestAllureConstant.JIRA
 import ru.iopump.kotest.allure.helper.meta.AllureMetadataSupport.findAll
 import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotation
@@ -26,6 +27,14 @@ internal object AllureMetadataSupportLabels {
             id.value
                 .findAll(KotestAllureConstant.ALLURE_ID.PATTERN)
                 .map { key -> createLabel(ALLURE_ID_LABEL_NAME, key) }
+                .toList()
+        }.orEmpty()
+
+    internal inline val Descriptor?.jiraLabelsFromTestName: Collection<Label>
+        get() = this?.run {
+            id.value
+                .findAll(JIRA.PATTERN)
+                .map { key -> createLabel(JIRA.LABEL_NAME, key) }
                 .toList()
         }.orEmpty()
 }

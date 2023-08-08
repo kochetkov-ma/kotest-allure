@@ -16,6 +16,8 @@ object KotestAllureConstant {
     object JIRA {
 
         const val LINK_TYPE = "jira"
+        
+        const val LABEL_NAME = "jira"
 
         internal const val PATTERN_DEFAULT = "\\[([a-zA-Z]+-\\d+)]"
 
