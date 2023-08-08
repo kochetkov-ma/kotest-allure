@@ -2,7 +2,7 @@ Extended Allure Listener for Kotest
 =================================
 
 [![jdk11](https://camo.githubusercontent.com/f3886a668d85acf93f6fec0beadcbb40a5446014/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f6a646b2d31312d7265642e737667)](https://www.oracle.com/java/technologies/javase-jdk11-downloads.html)
-[![kotlin](https://img.shields.io/badge/kotlin-1.7.10-green)](https://github.com/JetBrains/kotlin)
+[![kotlin](https://img.shields.io/badge/kotlin-1.8.10-green)](https://github.com/JetBrains/kotlin)
 [![gradle](https://camo.githubusercontent.com/f7b6b0146f2ee4c36d3da9fa18d709301d91f811/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f746f6f6c2d677261646c652d626c75652e737667)](https://gradle.org/)
 ![GitHub](https://img.shields.io/github/license/kotest/kotest)
 [![maven central](https://img.shields.io/maven-central/v/ru.iopump.kotest/kotest-allure)](http://search.maven.org/#search|ga|1|kotest-allure)
@@ -15,7 +15,7 @@ Extended Allure Listener for Kotest
 
 ```groovy
 dependencies {
-    testImplementation "ru.iopump.kotest:kotest-allure:$kotestAllureVersion"
+    testImplementation "ru.iopump.kotest:kotest-allure:5.6.2"
 
     // Kotest deps https://github.com/kotest/kotest/blob/master/doc/reference.md#getting-started
     testImplementation 'io.kotest:kotest-runner-junit5-jvm:<version>'
