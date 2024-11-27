@@ -1,3 +1,5 @@
+import static org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11
+
 plugins {
     id 'idea'
     id 'signing'
@@ -13,10 +15,12 @@ group 'ru.iopump.kotest'
 
 apply from: "$rootDir/gradle/publishing.gradle"
 
-compileKotlin {
-    sourceCompatibility = JavaVersion.VERSION_1_9
-    targetCompatibility = JavaVersion.VERSION_1_9
-    kotlinOptions.jvmTarget = '9'
+kotlin {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+    compilerOptions {
+        jvmTarget = JVM_11
+    }
 }
 
 wrapper {
@@ -48,7 +52,7 @@ dependencies {
 }
 
 test {
-    systemProperty "allure.results.directory", file("$buildDir/allure-results")
+    systemProperty "allure.results.directory", file("$layout.buildDirectory/allure-results")
     useJUnitPlatform()
     systemProperty "kotest.framework.dump.config", "true"
 }
@@ -72,10 +76,10 @@ dependencyUpdates {
     gradleReleaseChannel = 'current'
 }
 
-task cleanAllureResult {
+tasks.register("cleanAllureResult") {
     group = 'verification'
     doLast {
-        delete "$buildDir/allure-results"
+        delete "$layout.buildDirectory/allure-results"
     }
 }
 

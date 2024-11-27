@@ -1,11 +1,11 @@
 ////// make release //////
-task javadocJar(type: Jar) {
+tasks.register('javadocJar', Jar) {
     archiveClassifier.set 'javadoc'
     from javadoc
     javadoc.options.addStringOption('Xdoclint:none', '-quiet')
 }
 
-task sourcesJar(type: Jar) {
+tasks.register('sourcesJar', Jar) {
     archiveClassifier.set 'sources'
     from sourceSets.main.allSource
 }
