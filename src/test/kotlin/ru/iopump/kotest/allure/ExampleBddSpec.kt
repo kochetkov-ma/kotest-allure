@@ -9,7 +9,12 @@ import io.qameta.allure.Issue
 import io.qameta.allure.Issues
 import io.qameta.allure.Link
 import io.qameta.allure.Links
-import ru.iopump.kotest.allure.annotation.*
+import ru.iopump.kotest.allure.annotation.KAllureId
+import ru.iopump.kotest.allure.annotation.KDescription
+import ru.iopump.kotest.allure.annotation.KJira
+import ru.iopump.kotest.allure.annotation.KJiras
+import ru.iopump.kotest.allure.annotation.KTag
+import ru.iopump.kotest.allure.annotation.KTags
 
 @Epic("Allure feature annotation on test class")
 @Feature("Behavior")

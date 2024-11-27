@@ -3,17 +3,20 @@ package ru.iopump.kotest.allure.helper
 import io.kotest.core.descriptors.Descriptor
 import io.kotest.core.descriptors.Descriptor.TestDescriptor
 import io.kotest.core.source.SourceRef
+import io.kotest.core.source.SourceRef.ClassLineSource
 import io.kotest.core.source.SourceRef.ClassSource
-import io.kotest.core.source.SourceRef.FileSource
 import io.kotest.core.source.SourceRef.None
-import io.kotest.core.test.TestResult.Success
-import io.kotest.core.test.TestStatus
+import io.kotest.engine.test.TestResult
+import io.kotest.engine.test.TestResult.Success
+import io.qameta.allure.model.Status
+import io.qameta.allure.model.StatusDetails
 import io.qameta.allure.model.StepResult
 import ru.iopump.kotest.allure.KotestAllureListener.log
 import ru.iopump.kotest.allure.api.KotestAllureConstant.VAR.DATA_DRIVEN_SUPPORT
 import ru.iopump.kotest.allure.api.KotestAllureExecution.ALLURE
 import ru.iopump.kotest.allure.api.KotestAllureExecution.containerUuid
 import ru.iopump.kotest.allure.helper.InternalExecutionModel.Iteration.Factory.scenario
+import ru.iopump.kotest.allure.helper.InternalExecutionModel.startStep
 import ru.iopump.kotest.allure.helper.InternalUtil.processSkipResult
 import ru.iopump.kotest.allure.helper.InternalUtil.prop
 import ru.iopump.kotest.allure.helper.InternalUtil.toAllure
@@ -52,6 +55,7 @@ object InternalExecutionModel {
                         ?.index
                         ?.also { if (it >= 1) log.debug("New iteration has been started with index '$it'") }
                         ?: 0
+
                     false -> 0
                 }
                 val metadata = AllureMetadata(testCase.spec::class, testCase.descriptor)
@@ -64,6 +68,20 @@ object InternalExecutionModel {
         testUuidMap[testCase.descriptor].toOptional().ifPresentOrElse(
             { uuid ->
                 ALLURE.updateTestCase(uuid) { it.updateStatus(testResult.toAllure()) }
+                ALLURE.stopTestCase(uuid)
+                ALLURE.writeTestCase(uuid)
+
+                if (dataDrivenSupport && prune) iterationMap.remove(testCase.descriptor)
+                testUuidMap.remove(testCase.descriptor)
+            },
+            { log.error("Cannot stop Scenario '$testCase' because it hasn't been started") }
+        )
+    }
+
+    internal fun stopScenario(testCase: KotestTestCase, reason: String?, prune: Boolean = true) {
+        testUuidMap[testCase.descriptor].toOptional().ifPresentOrElse(
+            { uuid ->
+                ALLURE.updateTestCase(uuid) { it.updateStatus(Status.SKIPPED to StatusDetails().apply { this.message = reason }) }
                 ALLURE.stopTestCase(uuid)
                 ALLURE.writeTestCase(uuid)
 
@@ -149,6 +167,25 @@ object InternalExecutionModel {
         )
     }
 
+    internal fun stopStep(testCase: KotestTestCase, reason: String?) {
+        testUuidMap[testCase.descriptor].toOptional().ifPresentOrElse(
+            { uuid ->
+                testCase.parentUuid.toOptional().ifPresentOrElse(
+                    {
+                        ALLURE.updateStep(uuid) {
+                            it.updateStatus(
+                                Status.SKIPPED to StatusDetails().apply { this.message = reason })
+                        }
+                        ALLURE.stopStep(uuid)
+                        testUuidMap.remove(testCase.descriptor)
+                    },
+                    { stopScenario(testCase = testCase, reason = reason) }
+                )
+            },
+            { log.error("Cannot stop Step '$testCase' because it hasn't been started") }
+        )
+    }
+
     /////////////////
     //// PRIVATE ////
     /////////////////
@@ -157,13 +194,24 @@ object InternalExecutionModel {
         is None -> {
             System.err.println(
                 "Cannot determine correct line number for DDT iteration! " +
-                        "You should add test sources to your project. " +
-                        "Or disable DATA_DRIVEN_SUPPORT > 'kotest.allure.data.driven=false'"
+                    "You should add test sources to your project. " +
+                    "Or disable DATA_DRIVEN_SUPPORT > 'kotest.allure.data.driven=false'"
             )
             0
         }
-        is FileSource -> lineNumber ?: 0
-        is ClassSource -> lineNumber ?: 0
+
+        is ClassLineSource -> {
+            lineNumber ?: 0
+        }
+
+        is ClassSource -> {
+            System.err.println(
+                "Cannot determine correct line number for DDT iteration! " +
+                    "You should add test sources to your project. " +
+                    "Or disable DATA_DRIVEN_SUPPORT > 'kotest.allure.data.driven=false'"
+            )
+            0
+        }
     }
 
     private fun uuid(): String = UUID.randomUUID().toString()
@@ -177,5 +225,11 @@ object InternalExecutionModel {
 
     private val KotestTestCase.parentUuid: String? get() = testUuidMap[descriptor.parent]
 
-    private val KotestTestResult.needPassOnTop: Boolean get() = status in arrayOf(TestStatus.Error, TestStatus.Failure)
+    private val KotestTestResult.needPassOnTop: Boolean
+        get() = when (this) {
+            is TestResult.Error -> true
+            is TestResult.Failure -> true
+            is TestResult.Ignored -> false
+            is Success -> false
+        }
 }

@@ -5,3 +5,5 @@ allure-results/
 .idea/
 gradle/wrapper/gradle-wrapper.jar
 build/
+expected-allure-report/
+.kotlin/

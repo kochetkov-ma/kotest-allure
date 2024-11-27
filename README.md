@@ -14,8 +14,12 @@ Extended Allure Listener for Kotest
 ### Add dependencies
 
 ```groovy
+plugins {
+    id("io.kotest") version "<version>"
+}
+
 dependencies {
-    testImplementation "ru.iopump.kotest:kotest-allure:5.6.2"
+    testImplementation "ru.iopump.kotest:kotest-allure:6.0.3"
 
     // Kotest deps https://github.com/kotest/kotest/blob/master/doc/reference.md#getting-started
     testImplementation 'io.kotest:kotest-runner-junit5-jvm:<version>'
@@ -23,8 +27,6 @@ dependencies {
 }
 ```
 
-Allure `TestListener` (and `Extension`) has annotation `@AutoScan` that's why not necessary to enable this Listener
-explicitly.  
 Also, it provides necessary `allure common libs` but doesn't offer Kotest dependency.
 
 ### Results
