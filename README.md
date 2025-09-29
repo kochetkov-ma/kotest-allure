@@ -27,8 +27,6 @@ dependencies {
 }
 ```
 
-Also, it provides necessary `allure common libs` but doesn't offer Kotest dependency.
-
 ### Results
 
 By default, results were collected to `./build/allure-results`.  
@@ -51,11 +49,18 @@ plugins {
     id "io.qameta.allure" version "$allurePluginVersion"
 }
 allure {
-    version = allureVersion
-    autoconfigure = false
-    aspectjweaver = true
-    aspectjVersion = aspectJVersion
-    resultsDir = file "$buildDir/allure-results"
+    adapter {
+        allureJavaVersion = allureVersion
+        autoconfigureListeners = false
+        aspectjWeaver = true
+        version = allureVersion
+        aspectjVersion = aspectJVersion
+        frameworks {
+            junit5 {
+                enabled = false
+            }
+        }
+    }
 }
 ``` 
 
