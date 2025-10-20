@@ -2,7 +2,7 @@ package ru.iopump.kotest.allure.annotation
 
 import io.qameta.allure.LabelAnnotation
 import io.qameta.allure.util.ResultsUtils
-import java.lang.annotation.*
+import java.lang.annotation.Inherited
 
 @MustBeDocumented
 @Inherited

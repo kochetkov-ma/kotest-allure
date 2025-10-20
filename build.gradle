@@ -1,3 +1,5 @@
+import static org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11
+
 plugins {
     id 'idea'
     id 'signing'
@@ -8,15 +10,17 @@ plugins {
     id 'io.codearte.nexus-staging' version "$nexusStagingPluginVersion"
     id 'com.github.ben-manes.versions' version "$benManesPluginVersion"
     id 'ru.iopump.qa.allure' version "$allureServerPluginVersion"
+    id("io.kotest") version "$kotestVersion"
 }
 group 'ru.iopump.kotest'
 
 apply from: "$rootDir/gradle/publishing.gradle"
 
-compileKotlin {
-    sourceCompatibility = JavaVersion.VERSION_1_9
-    targetCompatibility = JavaVersion.VERSION_1_9
-    kotlinOptions.jvmTarget = '9'
+kotlin {
+    jvmToolchain(11)
+    compilerOptions {
+        jvmTarget = JVM_11
+    }
 }
 
 wrapper {
@@ -30,27 +34,29 @@ repositories {
 }
 
 dependencies {
+    implementation(platform("io.kotest:kotest-bom:$kotestVersion"))
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation "org.jetbrains.kotlin:kotlin-reflect"
-    implementation("io.kotest:kotest-framework-api:$kotestVersion") { exclude group: 'org.jetbrains.kotlin' }
     implementation("io.kotest:kotest-framework-engine-jvm:$kotestVersion") { exclude group: 'org.jetbrains.kotlin' }
 
     api "org.opentest4j:opentest4j:$opentest4jVersion"
     api "io.qameta.allure:allure-java-commons:$allureVersion"
 
-    testImplementation "io.kotest:kotest-property:$kotestVersion"
-    testImplementation "io.kotest:kotest-framework-datatest:$kotestVersion"
+    testImplementation("io.kotest:kotest-assertions-table:$kotestVersion")
+    testImplementation("io.kotest.extensions:kotest-property-arbs:$kotestPropertyArbsVersion")
     testImplementation "org.slf4j:slf4j-simple:$slf4jVersion"
-    testImplementation("io.kotest:kotest-runner-junit5-jvm:$kotestVersion") {
+    testImplementation("io.kotest:kotest-runner-junit5-jvm") {
         exclude group: 'org.jetbrains.kotlin'
         exclude group: 'io.mockk'
     }
 }
 
 test {
-    systemProperty "allure.results.directory", file("$buildDir/allure-results")
+    systemProperty "allure.results.directory", file("${layout.buildDirectory.get()}/allure-results")
     useJUnitPlatform()
+    systemProperty("kotest.framework.config.fqn", "ru.iopump.kotest.allure.ProjectConfiguration")
     systemProperty "kotest.framework.dump.config", "true"
+    systemProperty "KOTEST_DEBUG", "true"
 }
 
 allure {
@@ -72,10 +78,10 @@ dependencyUpdates {
     gradleReleaseChannel = 'current'
 }
 
-task cleanAllureResult {
+tasks.register("cleanAllureResult") {
     group = 'verification'
     doLast {
-        delete "$buildDir/allure-results"
+        delete "$layout.buildDirectory/allure-results"
     }
 }
 

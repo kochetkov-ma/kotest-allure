@@ -6,5 +6,5 @@ import io.qameta.allure.model.TestResult
 
 typealias AllureTestResult = TestResult
 typealias AllureStepResult = StepResult
-typealias KotestTestResult = io.kotest.core.test.TestResult
+typealias KotestTestResult = io.kotest.engine.test.TestResult
 typealias KotestTestCase = TestCase

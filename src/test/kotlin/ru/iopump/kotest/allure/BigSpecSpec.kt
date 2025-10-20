@@ -1,19 +1,21 @@
 package ru.iopump.kotest.allure
 
+import io.kotest.common.ExperimentalKotest
 import io.kotest.core.spec.style.FreeSpec
+import io.kotest.engine.concurrency.TestExecutionMode
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import io.kotest.property.arbitrary.positiveInt
 import io.qameta.allure.Epic
 import io.qameta.allure.Feature
 
+@OptIn(ExperimentalKotest::class)
 @Epic("Allure feature annotation on test class")
 @Feature("Concurrency")
 class BigSpecSpec : FreeSpec() {
-
-    override fun concurrency(): Int = 2
-
     init {
+        testExecutionMode = TestExecutionMode.Concurrent
+        
         "Scenario: Getting employee by id" - {
 
             var expectedId = 0

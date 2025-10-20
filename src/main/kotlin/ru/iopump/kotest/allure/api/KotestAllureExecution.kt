@@ -72,7 +72,7 @@ object KotestAllureExecution {
     /**
      * The longest name for [TestCase.descriptor]
      */
-    fun Descriptor.bestName() = this.chain().joinToString("_") { it.id.value }
+    fun Descriptor.bestName() = this.ids().joinToString("_") { it.value }
 
     /**
      * Create Set Up Fixture for [Spec]

@@ -1,6 +1,7 @@
 package ru.iopump.kotest.allure.api
 
 import io.qameta.allure.AllureLifecycle
+import ru.iopump.kotest.allure.api.KotestAllureConstant.VAR.ALLURE_RESULTS_DIR
 import ru.iopump.kotest.allure.helper.InternalUtil.prop
 
 /**

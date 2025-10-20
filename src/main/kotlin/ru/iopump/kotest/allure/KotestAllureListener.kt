@@ -1,22 +1,21 @@
 package ru.iopump.kotest.allure
 
-import io.kotest.core.config.ProjectConfiguration
+
+import io.kotest.common.reflection.bestName
 import io.kotest.core.descriptors.Descriptor.TestDescriptor
 import io.kotest.core.descriptors.DescriptorId
 import io.kotest.core.descriptors.toDescriptor
-import io.kotest.core.extensions.TestCaseExtension
 import io.kotest.core.listeners.IgnoredSpecListener
+import io.kotest.core.listeners.IgnoredTestListener
 import io.kotest.core.listeners.InstantiationErrorListener
 import io.kotest.core.listeners.ProjectListener
 import io.kotest.core.listeners.TestListener
 import io.kotest.core.names.TestName
-import io.kotest.core.spec.AutoScan
 import io.kotest.core.spec.DslDrivenSpec
 import io.kotest.core.spec.Spec
 import io.kotest.core.test.TestCase
-import io.kotest.core.test.TestResult
 import io.kotest.core.test.TestType
-import io.kotest.engine.test.status.isEnabled
+import io.kotest.engine.test.TestResult
 import io.qameta.allure.model.TestResultContainer
 import ru.iopump.kotest.allure.api.KotestAllureExecution.ALLURE
 import ru.iopump.kotest.allure.api.KotestAllureExecution.EXECUTION_START_CALLBACK
@@ -38,10 +37,11 @@ import kotlin.time.Duration.Companion.seconds
  * See [ru.iopump.kotest.allure.api.KotestAllureExecution] - get access to Spec and Project uuid to add Allure fixture.
  * See
  */
-@AutoScan
-object KotestAllureListener : ProjectListener, TestListener, InstantiationErrorListener, TestCaseExtension,
-    IgnoredSpecListener {
-    private val projectConfigurationDefault = ProjectConfiguration()
+object KotestAllureListener : ProjectListener,
+    TestListener,
+    InstantiationErrorListener,
+    IgnoredSpecListener,
+    IgnoredTestListener {
     internal val log = logger<KotestAllureListener>()
 
     override suspend fun beforeProject() {
@@ -82,61 +82,34 @@ object KotestAllureListener : ProjectListener, TestListener, InstantiationErrorL
         ALLURE.writeTestContainer(specContainerUuid)
     }
 
-    override suspend fun beforeContainer(testCase: TestCase) {
-        debug("beforeContainer - $testCase")
+    override suspend fun beforeAny(testCase: TestCase) {
+        debug("beforeAny - $testCase")
         if (testCase.descriptor.isRootTest()) startScenario(testCase)
         else startStep(testCase)
     }
 
-    override suspend fun afterContainer(testCase: TestCase, result: TestResult) {
-        debug("afterContainer - $testCase - $result")
+    override suspend fun afterAny(testCase: TestCase, result: TestResult) {
+        debug("afterAny - $testCase - $result")
         if (testCase.descriptor.isRootTest()) stopScenario(testCase, result)
         else stopStep(testCase, result)
-    }
-
-    override suspend fun beforeEach(testCase: TestCase) {
-        debug("beforeEach - $testCase")
-        if (testCase.descriptor.isRootTest()) startScenario(testCase)
-        else startStep(testCase)
-    }
-
-    override suspend fun beforeTest(testCase: TestCase) {
-        if (testCase.type == TestType.Dynamic)
-            beforeEach(testCase)
-    }
-
-    override suspend fun afterEach(testCase: TestCase, result: TestResult) {
-        debug("afterEach - $testCase - $result")
-        if (testCase.descriptor.isRootTest()) stopScenario(testCase, result)
-        else stopStep(testCase, result)
-    }
-
-    override suspend fun afterTest(testCase: TestCase, result: TestResult) {
-        if (testCase.type == TestType.Dynamic)
-            afterEach(testCase, result)
-    }
-
-    /**
-     * Process skipped TestCase/Test Step.
-     */
-    override suspend fun intercept(testCase: TestCase, execute: suspend (TestCase) -> TestResult): TestResult {
-        val skipped = testCase.isEnabled(projectConfigurationDefault).isEnabled.not()
-
-        if (skipped) {
-            debug("intercept on skipped test - $testCase")
-            beforeEach(testCase)
-        }
-        val executionResult = execute(testCase)
-
-        if (skipped) afterEach(testCase, executionResult)
-
-        return executionResult
     }
 
     override suspend fun ignoredSpec(kclass: KClass<*>, reason: String?) {
         debug("specIgnored - $kclass")
 
         emptySpecInternal(kclass, kclass.toDescriptor().id.value, TestResult.Ignored(reason))
+    }
+
+    override suspend fun ignoredTest(testCase: TestCase, reason: String?) {
+        debug("testIgnored - $testCase - $reason")
+
+        if (reason != "Failfast enabled") {
+            if (testCase.descriptor.isRootTest()) startScenario(testCase)
+            else startStep(testCase)
+        }
+
+        if (testCase.descriptor.isRootTest()) stopScenario(testCase, reason = reason)
+        else stopStep(testCase, reason = reason)
     }
 
     /**
@@ -157,7 +130,7 @@ object KotestAllureListener : ProjectListener, TestListener, InstantiationErrorL
         ALLURE.startTestContainer(PROJECT_UUID, specContainerResult)
         val informationTestCase = KotestTestCase(
             descriptor = TestDescriptor(kclass.toDescriptor(), DescriptorId(message)),
-            name = TestName(null, message, null, false),
+            name = TestName(kclass.bestName(), false, false, message, null, false),
             spec = object : DslDrivenSpec() {},
             test = {},
             type = TestType.Test

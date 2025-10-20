@@ -1,11 +1,13 @@
 package ru.iopump.kotest.allure.helper
 
 import io.kotest.core.test.TestCase
-import io.kotest.core.test.TestResult
-import io.kotest.core.test.TestResult.*
+import io.kotest.engine.test.TestResult
 import io.qameta.allure.model.Label
 import io.qameta.allure.model.Status
-import io.qameta.allure.model.Status.*
+import io.qameta.allure.model.Status.BROKEN
+import io.qameta.allure.model.Status.FAILED
+import io.qameta.allure.model.Status.PASSED
+import io.qameta.allure.model.Status.SKIPPED
 import io.qameta.allure.model.StatusDetails
 import io.qameta.allure.util.ResultsUtils
 import org.opentest4j.TestAbortedException
@@ -20,7 +22,8 @@ import java.io.StringWriter
 import java.lang.System.getProperty
 import java.lang.System.getenv
 import java.math.BigDecimal
-import java.util.*
+import java.util.Locale
+import java.util.Optional
 import kotlin.reflect.full.isSubclassOf
 
 internal object InternalUtil {
@@ -67,10 +70,10 @@ internal object InternalUtil {
 
     internal fun TestResult.toAllure(): Pair<Status, StatusDetails> {
         val status = when (this) {
-            is Error -> BROKEN
-            is Failure -> FAILED
-            is Ignored -> SKIPPED
-            is Success -> PASSED
+            is TestResult.Error -> BROKEN
+            is TestResult.Failure -> FAILED
+            is TestResult.Ignored -> SKIPPED
+            is TestResult.Success -> PASSED
         }
 
         val details = this.errorOrNull?.let { throwable ->
@@ -88,7 +91,7 @@ internal object InternalUtil {
         val index = "$i".takeIf { i >= 1 }.orEmpty()
         uuid = testUuid
 
-        name = test.name.testName.allureMetaCleanUp() + suffix
+        name = test.name.name.allureMetaCleanUp() + suffix
         description = meta.allDescriptions
 
         fullName = test.descriptor.bestName().allureMetaCleanUp() + index
@@ -99,7 +102,7 @@ internal object InternalUtil {
     }
 
     internal fun AllureStepResult.updateStepResult(testCase: TestCase, metadata: AllureMetadata) {
-        name = testCase.name.testName
+        name = testCase.name.name
         description = metadata.allDescriptions
     }
 
@@ -138,6 +141,7 @@ internal object InternalUtil {
 
     internal fun processSkipResult(result: AllureTestResult) {
         if (skipOnFail and result.isBad) {
+
             val causeMessage = result.statusDetails.message.removePrefix(skipMsg)
             throw TestAbortedException(skipMsg + causeMessage)
         }
