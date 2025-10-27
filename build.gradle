@@ -1,4 +1,4 @@
-import static org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11
+import static org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21
 
 plugins {
     id 'idea'
@@ -17,9 +17,9 @@ group 'ru.iopump.kotest'
 apply from: "$rootDir/gradle/publishing.gradle"
 
 kotlin {
-    jvmToolchain(11)
+    jvmToolchain(21)
     compilerOptions {
-        jvmTarget = JVM_11
+        jvmTarget = JVM_21
     }
 }
 
