@@ -34,7 +34,14 @@ tasks.withType(Test).configureEach {
 }
 ```
 
-For projects on the earlier [6.0.3 line](https://github.com/kochetkov-ma/kotest-allure/releases/tag/v6.0.3), use `ru.iopump.kotest:kotest-allure:6.0.3` with the Kotest 6.0.3 runner. That line uses Kotlin 2.2.10 and Allure Java 2.30.0, and targets Java 11 bytecode. The installation above remains the guide for 6.2.5; the two lines have different Java targets and dependency versions.
+### Choose a version
+
+| Line | Kotest | Kotlin | Allure Java | Java bytecode | Maven Central coordinate | Release |
+| --- | --- | --- | --- | --- | --- | --- |
+| Current 6.2.5 | 6.2.5 | 2.2.21 | 2.35.5 | 21 | [`ru.iopump.kotest:kotest-allure:6.2.5`](https://central.sonatype.com/artifact/ru.iopump.kotest/kotest-allure/6.2.5) | [v6.2.5](https://github.com/kochetkov-ma/kotest-allure/releases/tag/v6.2.5) |
+| Legacy 6.0.3 | 6.0.3 | 2.2.10 | 2.30.0 | 11 | [`ru.iopump.kotest:kotest-allure:6.0.3`](https://central.sonatype.com/artifact/ru.iopump.kotest/kotest-allure/6.0.3) | [v6.0.3](https://github.com/kochetkov-ma/kotest-allure/releases/tag/v6.0.3) |
+
+Future work targets the latest `master` line (currently 6.2.5). The published 6.0.3 artifact remains resolvable for compatibility; no backports are planned. The Quick Start example above uses 6.2.5.
 
 Register the listener once in a Kotest project configuration:
 
