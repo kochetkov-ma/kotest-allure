@@ -34,6 +34,8 @@ tasks.withType(Test).configureEach {
 }
 ```
 
+For projects on the earlier [6.0.3 line](https://github.com/kochetkov-ma/kotest-allure/releases/tag/v6.0.3), use `ru.iopump.kotest:kotest-allure:6.0.3` with the Kotest 6.0.3 runner. That line uses Kotlin 2.2.10 and Allure Java 2.30.0, and targets Java 11 bytecode. The installation above remains the guide for 6.2.5; the two lines have different Java targets and dependency versions.
+
 Register the listener once in a Kotest project configuration:
 
 ```kotlin
