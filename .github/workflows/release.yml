@@ -1,41 +1,78 @@
-name: Make Release / Publish to OSS / Promote to Maven Central
+name: Publish to Maven Central
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: central-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  build:
+  verify:
+    if: github.repository == 'kochetkov-ma/kotest-allure'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set RELEASE_VERSION
-        run: echo "RELEASE_VERSION=${GITHUB_REF##*/v}" >> $GITHUB_ENV
-
-      - name: Print information
-        run: echo "Version ${{ env.RELEASE_VERSION }}"
-
-      - name: Set up JDK
-        uses: actions/setup-java@v4
+      - name: Checkout tag
+        uses: actions/checkout@v7.0.1
         with:
-          distribution: 'temurin'
+          fetch-depth: 0
+
+      - name: Verify tag and project version
+        shell: bash
+        run: |
+          [[ "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          release_version="${GITHUB_REF_NAME#v}"
+          project_version="$(sed -n 's/^version=//p' gradle.properties)"
+          [[ "$project_version" == "$release_version" ]]
+
+      - name: Verify tag commit is on master
+        run: |
+          git fetch --no-tags origin '+refs/heads/master:refs/remotes/origin/master'
+          git merge-base --is-ancestor HEAD refs/remotes/origin/master
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v6.0.1
+        with:
+          distribution: temurin
           java-version: '21'
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+      - name: Set up Gradle 8.14.5
+        uses: gradle/actions/setup-gradle@v6.3.0
         with:
-          gradle-version: 9.0.0
+          gradle-version: '8.14.5'
+          cache-provider: basic
 
-      - name: Build / Upload to OSS sonatype / Promote to Maven Central
+      - name: Run tests
+        run: ./gradlew clean check --no-daemon
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@v7.0.1
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v6.0.1
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Gradle 8.14.5
+        uses: gradle/actions/setup-gradle@v6.3.0
+        with:
+          gradle-version: '8.14.5'
+          cache-provider: basic
+
+      - name: Upload and release validated publication
         env:
-          GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
-        run: |
-          gradle --info --stacktrace \
-            -Pversion=${{ env.RELEASE_VERSION }} \
-            -Psigning.password=${{ secrets.GPG_SIGNING_PASSWORD }} \
-            -PossrhUsername=kochetkov-ma \
-            -PossrhPassword=${{ secrets.ossrhPassword }} \
-            -x test publish createRepository closeAndReleaseRepository \
-            --no-build-cache --rerun-tasks
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.GPG_SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.GPG_SIGNING_PASSWORD }}
+        run: ./gradlew publishAndReleaseToMavenCentral --no-daemon --no-build-cache

@@ -1,96 +1,57 @@
-////// make release //////
-tasks.register('javadocJar', Jar) {
-    archiveClassifier.set 'javadoc'
-    from javadoc
-    javadoc.options.addStringOption('Xdoclint:none', '-quiet')
+def unsignedLocalProof = providers.gradleProperty('unsignedLocalProof').orNull == 'true'
+def localPublishOnly = gradle.startParameter.taskNames && gradle.startParameter.taskNames.every {
+    it == 'publishToMavenLocal' || it == ':publishToMavenLocal'
+}
+if (unsignedLocalProof && !localPublishOnly) {
+    throw new GradleException('unsignedLocalProof is restricted to publishToMavenLocal')
 }
 
-tasks.register('sourcesJar', Jar) {
-    archiveClassifier.set 'sources'
-    from sourceSets.main.allSource
-}
+mavenPublishing {
+    publishToMavenCentral()
+    if (!unsignedLocalProof) {
+        signAllPublications()
+    }
+    coordinates(project.group, project.name, project.version)
+    pom {
+        name = 'Kotest Allure Integration'
+        description = 'Allure Listener for Kotest and some extra functions'
+        url = 'https://github.com/kochetkov-ma/kotest-allure'
+        inceptionYear = '2021'
 
-java {
-    withJavadocJar()
-    withSourcesJar()
-}
-
-static def trim(String sourceString, String trimmedChar = '"') {
-    sourceString.replaceAll(~/^\$trimmedChar+|\$trimmedChar+$/, '')
-}
-
-def loadSigningKeyFromFile() {
-    def signingKeyAbsolutePath = findProperty('signing.key.path')
-    def signingKeyFile = file(signingKeyAbsolutePath)
-    logger.lifecycle("GPG signing key will be loaded from file '$signingKeyFile'")
-
-
-    return signingKeyFile.exists() ? signingKeyFile.text : ''
-}
-
-publishing {
-    publications {
-        kotest(MavenPublication) {
-            groupId = project.group
-            artifactId = project.name
-            from components.java
-            pom {
-                name = 'Kotest Allure Integration'
-                description = 'Allure Listener for Kotest and some extra functions'
-                url = 'https://github.com/kochetkov-ma/kotest-allure'
-
-                packaging 'jar'
-
-                licenses {
-                    license {
-                        name = 'The Apache License, Version 2.0'
-                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-                    }
-                }
-                developers {
-                    developer {
-                        id = 'kochetkov-ma'
-                        name = 'Maxim Kochetkov'
-                        email = 'kochetkov-ma@yandex.ru'
-                    }
-                }
-
-                scm {
-                    connection = 'https://github.com/kochetkov-ma/kotest-allure.git'
-                    developerConnection = 'https://github.com/kochetkov-ma/kotest-allure.git'
-                    url = 'https://github.com/kochetkov-ma/kotest-allure'
-                }
+        licenses {
+            license {
+                name = 'The Apache License, Version 2.0'
+                url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+                distribution = 'repo'
             }
         }
-    }
-    repositories {
-        maven {
-            name = 'ossrh'
-            credentials {
-                username ossrhUsername
-                password ossrhPassword
+
+        developers {
+            developer {
+                id = 'kochetkov-ma'
+                name = 'Maksim Kochetkov'
+                email = 'apmatypa88@gmail.com'
             }
-            url = version.endsWith('SNAPSHOT')
-                    ? "https://oss.sonatype.org/content/repositories/snapshots/"
-                    : "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
+        }
+
+        scm {
+            url = 'https://github.com/kochetkov-ma/kotest-allure'
+            connection = 'scm:git:https://github.com/kochetkov-ma/kotest-allure.git'
+            developerConnection = 'scm:git:ssh://git@github.com/kochetkov-ma/kotest-allure.git'
         }
     }
 }
 
-signing {
-    String signingKeyText = trim(System.getenv('GPG_SIGNING_KEY') ?: loadSigningKeyFromFile())
-    String signingPassword = trim(findProperty('signing.password') as String ?: '')
-
-    logger.lifecycle('GPG signing key: {}', signingKeyText.take(100) + '******')
-    useInMemoryPgpKeys(signingKeyText, signingPassword)
-    sign publishing.publications.kotest
-}
-
-nexusStaging {
-    packageGroup = "ru.iopump"
-    numberOfRetries = 50
-    delayBetweenRetriesInMillis = 5000
-    serverUrl = "https://oss.sonatype.org/service/local/"
-    username = ossrhUsername
-    password = ossrhPassword
+if (!unsignedLocalProof && !providers.gradleProperty('signingInMemoryKey').isPresent()) {
+    def signingKey = System.getenv('GPG_SIGNING_KEY')
+    def signingKeyPath = findProperty('signing.key.path')
+    if (!signingKey && signingKeyPath) {
+        def signingKeyFile = file(signingKeyPath)
+        if (signingKeyFile.isFile()) {
+            signingKey = signingKeyFile.text
+        }
+    }
+    if (signingKey) {
+        signing.useInMemoryPgpKeys(signingKey, findProperty('signing.password') as String ?: '')
+    }
 }

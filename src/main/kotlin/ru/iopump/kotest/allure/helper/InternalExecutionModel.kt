@@ -17,6 +17,7 @@ import ru.iopump.kotest.allure.api.KotestAllureExecution.ALLURE
 import ru.iopump.kotest.allure.api.KotestAllureExecution.containerUuid
 import ru.iopump.kotest.allure.helper.InternalExecutionModel.Iteration.Factory.scenario
 import ru.iopump.kotest.allure.helper.InternalExecutionModel.startStep
+import ru.iopump.kotest.allure.helper.InternalUtil.completeStatus
 import ru.iopump.kotest.allure.helper.InternalUtil.processSkipResult
 import ru.iopump.kotest.allure.helper.InternalUtil.prop
 import ru.iopump.kotest.allure.helper.InternalUtil.toAllure
@@ -67,7 +68,10 @@ object InternalExecutionModel {
     internal fun stopScenario(testCase: KotestTestCase, testResult: KotestTestResult, prune: Boolean = true) {
         testUuidMap[testCase.descriptor].toOptional().ifPresentOrElse(
             { uuid ->
-                ALLURE.updateTestCase(uuid) { it.updateStatus(testResult.toAllure()) }
+                ALLURE.updateTestCase(uuid) {
+                    if (prune) it.completeStatus(testResult.toAllure())
+                    else it.updateStatus(testResult.toAllure())
+                }
                 ALLURE.stopTestCase(uuid)
                 ALLURE.writeTestCase(uuid)
 
@@ -192,7 +196,7 @@ object InternalExecutionModel {
 
     private fun SourceRef.lineNumber() = when (this) {
         is None -> {
-            System.err.println(
+            log.warn(
                 "Cannot determine correct line number for DDT iteration! " +
                     "You should add test sources to your project. " +
                     "Or disable DATA_DRIVEN_SUPPORT > 'kotest.allure.data.driven=false'"
@@ -205,7 +209,7 @@ object InternalExecutionModel {
         }
 
         is ClassSource -> {
-            System.err.println(
+            log.warn(
                 "Cannot determine correct line number for DDT iteration! " +
                     "You should add test sources to your project. " +
                     "Or disable DATA_DRIVEN_SUPPORT > 'kotest.allure.data.driven=false'"

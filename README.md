@@ -1,68 +1,87 @@
 Extended Allure Listener for Kotest
 =================================
 
-[![jdk11](https://camo.githubusercontent.com/f3886a668d85acf93f6fec0beadcbb40a5446014/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f6a646b2d31312d7265642e737667)](https://www.oracle.com/java/technologies/javase-jdk11-downloads.html)
-[![kotlin](https://img.shields.io/badge/kotlin-1.8.10-green)](https://github.com/JetBrains/kotlin)
-[![gradle](https://camo.githubusercontent.com/f7b6b0146f2ee4c36d3da9fa18d709301d91f811/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f746f6f6c2d677261646c652d626c75652e737667)](https://gradle.org/)
-![GitHub](https://img.shields.io/github/license/kotest/kotest)
-[![maven central](https://img.shields.io/maven-central/v/ru.iopump.kotest/kotest-allure)](http://search.maven.org/#search|ga|1|kotest-allure)
+[![Java 21](https://img.shields.io/badge/Java-21-blue)](https://adoptium.net/)
+[![Kotlin 2.2.21](https://img.shields.io/badge/Kotlin-2.2.21-blue)](https://kotlinlang.org/)
+[![Kotest 6.2.5](https://img.shields.io/badge/Kotest-6.2.5-blue)](https://kotest.io/)
+[![Gradle 8.14.5](https://img.shields.io/badge/Gradle-8.14.5-blue)](https://gradle.org/)
+[![Maven Central](https://img.shields.io/maven-central/v/ru.iopump.kotest/kotest-allure)](https://central.sonatype.com/artifact/ru.iopump.kotest/kotest-allure)
+
+This listener writes Kotest test cases, nested steps, fixtures, labels, and links to Allure 2 result files. Version 6.2.5 targets Kotest 6.2.5 and Java 21 bytecode. The library is built with Kotlin 2.2.21 and Allure Java 2.35.5. Use a Kotlin compiler that can consume Kotlin 2.2 metadata; Kotest 5 is outside this release's supported line.
 
 # Quick Start
 
 [Sample project](https://github.com/kochetkov-ma/pump-samples/tree/master/kotest-allure-sample)
 
-### Add dependencies
+### Install and register the listener
 
 ```groovy
 plugins {
-    id("io.kotest") version "<version>"
+    id 'org.jetbrains.kotlin.jvm' version '2.2.21'
+}
+
+repositories {
+    mavenCentral()
 }
 
 dependencies {
-    testImplementation "ru.iopump.kotest:kotest-allure:6.0.3"
+    testImplementation 'ru.iopump.kotest:kotest-allure:6.2.5'
+    testImplementation 'io.kotest:kotest-runner-junit5-jvm:6.2.5'
+}
 
-    // Kotest deps https://github.com/kotest/kotest/blob/master/doc/reference.md#getting-started
-    testImplementation 'io.kotest:kotest-runner-junit5-jvm:<version>'
-    // For Kotest framework with transitives 'core' and 'common'
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
 }
 ```
 
+Register the listener once in a Kotest project configuration:
+
+```kotlin
+import io.kotest.core.config.AbstractProjectConfig
+import ru.iopump.kotest.allure.KotestAllureListener
+
+class ProjectConfig : AbstractProjectConfig() {
+    override val extensions = listOf(KotestAllureListener)
+}
+```
+
+If Kotest does not discover your configuration automatically, set `kotest.framework.config.fqn` to its fully qualified class name in the test task. Avoid registering a second Allure listener, including the Allure JUnit 5 adapter, or the report can contain duplicates.
+
 ### Results
 
-By default, results were collected to `./build/allure-results`.  
-You can override it by system property `-Dallure.results.directory=...`.  
-Or via gradle script:
+Results are written to `build/allure-results` by default. Set the `allure.results.directory` system property to change the location. The listener clears that directory at project start by default; set `allure.results.directory.clear=false` to retain older files. A Gradle example:
 
 ```groovy
-test {
-    systemProperty "allure.results.directory", file("$buildDir/allure-results")
-    useJUnitPlatform()
+tasks.named('test', Test) {
+    systemProperty 'allure.results.directory', layout.buildDirectory.dir('allure-results').get().asFile
 }
 ```
 
 ### Reports
 
-Use gradle [allure plugin](https://github.com/allure-framework/allure-gradle) to generate report.
+Use the [Allure Gradle plugin](https://github.com/allure-framework/allure-gradle) to turn these result files into an HTML report. Keep its JUnit 5 framework adapter disabled because this library already writes the Kotest results. Allure Java 2.35.5 produces results; Allure commandline 2.46.1 renders the report. They have separate version numbers.
 
 ```groovy
 plugins {
-    id "io.qameta.allure" version "$allurePluginVersion"
+    id 'io.qameta.allure' version '4.3.0'
 }
 allure {
+    version = '2.46.1'
     adapter {
-        allureJavaVersion = allureVersion
+        allureJavaVersion = '2.35.5'
         autoconfigureListeners = false
         aspectjWeaver = true
-        version = allureVersion
-        aspectjVersion = aspectJVersion
+        aspectjVersion = '1.9.25.1'
         frameworks {
-            junit5 {
+            jupiter {
                 enabled = false
             }
         }
     }
 }
-``` 
+```
+
+This repository uses the report-only `io.qameta.allure-report` plugin and a pinned AspectJ agent attached to each test task. That setup keeps normal, fixture, legacy example, and contract results in separate directories. `allureFixtureTest` captures deliberate failures and skips; `allureResultContractTest` checks raw result JSON and HTML. `./gradlew check` also runs `legacyExamplesContractTest`, which checks expected legacy outcomes. The report is under `build/reports/allure-report/allureReport`. The JDK 21 `check` run passed with intentional fixture and legacy failures isolated from the normal tests.
 
 See [example](https://github.com/kochetkov-ma/pump-samples/tree/master/kotest-allure-sample)
 
@@ -109,7 +128,7 @@ class ExampleBddSpec : BehaviorSpec()
 
 Repeatable (annotation container) version of `KJira` annotation
 
-#### `@KAllureId` ⚡NEW⚡ (see `Links in test name > AllureID`)
+#### `@KAllureId` (see `Links in test name > AllureID`)
 
 The same as `@AllureId` but `@Target(AnnotationTarget.CLASS)`. It means to use it on specification class
 
@@ -126,14 +145,14 @@ class ExampleDataDrivenSpec : FreeSpec()
 You may specify jira link in a test name and even nested test name. Link must be matches with
 pattern `\[([a-zA-Z]+-\d+)]`.  Like `"Test name [PRJ-100]" { ... }`
 
-Use system variable `allure.jira.pattern` to override it.
+Set the `allure.jira.pattern` system property or environment variable to override the issue-key pattern.
 
 ```kotlin
 class ExampleBddSpec : BehaviorSpec({
     Given("[PRJ-100] Start kotest specification Scenario") { println("...") }
 })
 ```
-or `String.task()` extension ⚡NEW⚡
+or `String.task()` extension
 ```kotlin
 class ExampleBddSpec : BehaviorSpec({
     Given("Start kotest specification Scenario".task("PRJ-100")) { println("...") }
@@ -147,14 +166,14 @@ in `allure.properties`
 Specify TMS link in a test name and even nested test name. Link must be matches with
 pattern `\(([a-zA-Z]+-\d+)\)`. Like `"Test name (TC-100)" { ... }`
 
-Use system variable `allure.tms.pattern` to override it.
+Set `allure.tms.pattern` to override the TMS-key pattern.
 
 ```kotlin
 class ExampleBddSpec : FreeSpec({
     "[PRJ-100](TC-100) Start kotest specification Scenario" - { println("...") }
 })
 ```
-or `String.tms()` extension ⚡NEW⚡
+or `String.tms()` extension
 ```kotlin
 class ExampleBddSpec : FreeSpec({
     "[PRJ-100] Start kotest specification Scenario".tms("TC-100") - { println("...") }
@@ -164,11 +183,11 @@ class ExampleBddSpec : FreeSpec({
 `[TC-100]` consider as TMS link with key `TC-100` don't forget to define `allure.link.tms.pattern`
 in `allure.properties`
 
-#### [AllureID `TestOps`](https://qameta.io/) ⚡NEW⚡
-Specify [`ALLURE ID`]((https://qameta.io/)) link in a test name and even nested test name. Link must be matches with
+#### [Allure ID `TestOps`](https://qameta.io/)
+Specify an Allure ID label in a test name and even nested test name. It must match
 pattern `#(\d+)`. Like `"Test name #777" { ... }`
 
-Use system variable `allure.id.pattern` to override it.
+Set `allure.id.pattern` to override the Allure ID pattern.
 
 ```kotlin
 class ExampleBddSpec : FreeSpec({
@@ -182,32 +201,30 @@ class ExampleBddSpec : FreeSpec({
 })
 ```
 
-`777` consider as [`ALLURE ID`]((https://qameta.io/)) label with key `777`.
+`777` becomes an Allure ID label with value `777`.
 ## Other features
 
 See main feature above
 
 ### Intercepting all Allure messages
 
-Every `step` and `attachment` will be intercept and post to Sl4j logger by `ru.iopump.kotest.Slf4jAllureLifecycle`
+Every step and attachment is sent to SLF4J by `ru.iopump.kotest.allure.api.Slf4JAllureLifecycle`.
 `step` messages have an INFO level. `attachment` messages have an DEBUG level.  
 This feature enabled by default.  
-You may disable by system env `allure.slf4j.log`.
+You may disable it with `allure.slf4j.log=false` as a system property or environment variable.
 
 ### Skip following nested scenarios on fail
 
 If Test Case has nested scenarios and any of them will fail then follows ones will fail too with
 exception `TestAbortedException`
 This feature enabled by default.  
-You may disable by system env `kotest.allure.skip.on.fail`.
+You may disable it with `kotest.allure.skip.on.fail=false` as a system property or environment variable.
 
 ### Clean allure results on start
 
-Allure results directory specified by system env `allure.results.directory` will be removed on tet project start. This
-feature disabled by default.  
-You may enable by system env `allure.results.directory.clear`.
+The directory selected by `allure.results.directory` is cleared at project start by default. Set `allure.results.directory.clear=false` to preserve it.
 
-### Clean up allure metadata from `Test Names` ⚡NEW⚡
+### Clean up Allure metadata from test names
 ```kotlin
 class ExampleDataDrivenSpec : FreeSpec({
         "Scenario [J-100] (T-3) #999" - { }
@@ -223,7 +240,7 @@ But, if some unexpected result you may disable it by `kotest.allure.meta.cleanup
 
 ## Settings
 
-There is a full setting table. All settings adjust by system variable:
+Configure these settings through Java system properties or environment variables:
 
 | Name                           | Description                                                                                                                                                           | Default                |
 |--------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------|
@@ -234,9 +251,9 @@ There is a full setting table. All settings adjust by system variable:
 | allure.slf4j.log               | duplicate allure step and attachment messages to Slf4j Logger                                                                                                         | true                   |
 | allure.lifecycle.class         | Set `AllureLifecycle` full class name                                                                                                                                 | `ru.iopump.kotest.allure.api.Slf4JAllureLifecycle`|
 | kotest.allure.data.driven      | Create new Allure test case on each new iteration in Data Driven tests or Property Testing                                                                            | true |
-| kotest.allure.meta.cleanup ⚡NEW⚡     | Clean all allure metadata (issue, tms, allureId) from test case name. `"My test name [JIRA-1](TMS-2)#3 - { ... }` - will be cleaned up to `"My test name"` in report. | true |
+| kotest.allure.meta.cleanup     | Clean issue, TMS, and Allure ID tokens from test names. | true |
 
-All variables are very flexible, for example: `allure.jira.pattern` == `allure_jira_pattern` == `ALLURE.JIRA.PATTERN` == `ALLURE_JIRA_PATTERN` as `ENV` or `SYS` variable
+For environment variables, dots may be replaced with underscores, for example `ALLURE_JIRA_PATTERN`. For system properties, use the dotted key such as `allure.jira.pattern`.
 
 # Public report example
 
@@ -245,37 +262,32 @@ All variables are very flexible, for example: `allure.jira.pattern` == `allure_j
 
 # Troubleshooting
 
+### All root tests disabled in a spec
+
+With Kotest 6, a spec whose every root test is disabled using the `!` prefix produces skipped JUnit XML cases but bypasses the project's `ignoredTest` listener callback. This listener therefore has no event from which to write those cases to Allure JSON, so they are absent from the Allure report. Skipped tests in specs that also have enabled roots are covered. This is a current limitation; do not infer Allure coverage of an entirely disabled spec from its JUnit XML alone.
+
 ### Duplicated steps
 
 ![duplicated-steps.png](duplicated-steps.png)
 
-Because the listener has annotation `@AutoScan` it can be duplicated when you specify it in Configuration like this:
+Register this listener only once through a Kotest project configuration:
 
 ```kotlin
-// Main functions as Listener
-override fun listeners(): List<Listener> = listOf(
-    KotestAllureListener
-)
-
-// Support skipped test step as Extension
-override fun extensions(): List<Extension> = listOf(
-    KotestAllureListener
-)
+class ProjectConfig : AbstractProjectConfig() {
+    override val extensions = listOf(KotestAllureListener)
+}
 ```
 
-> For support to display skipped test step in report KotestAllureListener also implement Extension `interface`
+Remove duplicate registrations and other Allure result listeners from your configuration. This listener handles Kotest events directly.
 
-You should delete `KotestAllureListener` or other Allure Listeners from any configuration classes. Check you
-dependencies - it must contain the only allure extension `ru.iopump.kotest:kotest-allure`
+### Redundant test cases in the report
 
-### Redundant TestCases in Report
-
-If you're using Allure Gradle Plugin it can automatically add JUnit Listener. We don't need it for Kotest Engine. You should disable it:
+The combined Allure Gradle plugin can add a JUnit listener. This library writes Kotest results itself, so disable that adapter:
 ```groovy
 allure {
     adapter {
         frameworks {
-            junit5 {
+            jupiter {
                 enabled = false
             }
         }

@@ -107,8 +107,7 @@ internal object InternalUtil {
     }
 
     internal fun AllureTestResult.updateStatus(statusAndDetails: Pair<Status, StatusDetails>) {
-        // Kotest 5.4.X listener doesn't take into account child steps results.
-        // We should find previous fail / broken child steps in ALLURE storage and use it on top
+        // Preserve child errors until Kotest reports the final scenario result.
         val closestPreviousErrorOrBrokenStatusAndDetails: Pair<Status, StatusDetails> =
             steps.map { it.status to it.statusDetails }.lastOrNull { it.first.isBrokenOrFailed } ?: statusAndDetails
 
@@ -122,6 +121,14 @@ internal object InternalUtil {
         if (needUpdate) {
             this.status = effectiveStatusAndDetails.first
             this.statusDetails = effectiveStatusAndDetails.second
+        }
+    }
+
+    internal fun AllureTestResult.completeStatus(statusAndDetails: Pair<Status, StatusDetails>) {
+        // A Kotest child failure is propagated before its container reports success.
+        if (statusAndDetails.first != PASSED || !status.isBrokenOrFailed) {
+            status = statusAndDetails.first
+            statusDetails = statusAndDetails.second
         }
     }
 

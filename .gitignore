@@ -3,7 +3,23 @@
 .allure/
 allure-results/
 .idea/
-gradle/wrapper/gradle-wrapper.jar
 build/
 expected-allure-report/
 .kotlin/
+kotest-*.log
+gradlew.bat
+
+# Local agent guidance and task records
+AGENTS.md
+CLAUDE.md
+.codex/
+.claude/
+.agents/
+
+# Local publication credentials
+.secrets/
+.gpg/
+keys/
+.env
+.env.*
+!.env.example
