@@ -1,0 +1,181 @@
+name: Backfill Maven Central 6.0.3
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: central-backfill-6.0.3
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    if: github.repository == 'kochetkov-ma/kotest-allure' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Reject replay of the one-time backfill
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_RUN_NUMBER" != 1 || "$GITHUB_RUN_ATTEMPT" != 1 ]]; then
+            echo 'Inspect the first Portal deployment before any new upload attempt' >&2
+            exit 1
+          fi
+
+      - name: Checkout master with full history
+        uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify provenance and prepare 6.0.3 source
+        run: |
+          set -euo pipefail
+          source_commit=815c7264dacfdd1dc39886df9f4fd55624bacd0c
+          tag_commit=2315c83261e91e80bb9d96f80408a13b7d099f9e
+          [[ "$(git rev-parse "$source_commit^{commit}")" == "$source_commit" ]]
+          git merge-base --is-ancestor "$source_commit" HEAD
+          git fetch --no-tags origin refs/tags/v6.0.3
+          [[ "$(git rev-parse 'FETCH_HEAD^{commit}')" == "$tag_commit" ]]
+          git merge-base --is-ancestor "$source_commit" "$tag_commit"
+          git diff --quiet "$source_commit" "$tag_commit" -- src/main
+
+          build_dir=build/backfill-6.0.3
+          mkdir -p "$build_dir"
+          git archive "$source_commit" | tar -xf - -C "$build_dir"
+          for path in release/backfill-6.0.3/build.gradle release/backfill-6.0.3/gradle.properties; do
+            git ls-files --error-unmatch "$path" > /dev/null
+          done
+          cp release/backfill-6.0.3/build.gradle "$build_dir/build.gradle"
+          cp release/backfill-6.0.3/gradle.properties "$build_dir/gradle.properties"
+          for path in gradle/publishing.gradle gradlew gradle/wrapper/gradle-wrapper.jar gradle/wrapper/gradle-wrapper.properties; do
+            git ls-files --error-unmatch "$path" > /dev/null
+            mkdir -p "$build_dir/$(dirname "$path")"
+            cp "$path" "$build_dir/$path"
+          done
+          [[ -x "$build_dir/gradlew" ]]
+          grep -qx 'version=6.0.3' "$build_dir/gradle.properties"
+          grep -Fqx 'distributionUrl=https\://services.gradle.org/distributions/gradle-8.14.5-bin.zip' "$build_dir/gradle/wrapper/gradle-wrapper.properties"
+          grep -qx 'kotlinVersion=2.2.10' "$build_dir/gradle.properties"
+          grep -qx 'kotestVersion=6.0.3' "$build_dir/gradle.properties"
+          grep -qx 'allureJavaVersion=2.30.0' "$build_dir/gradle.properties"
+          if grep -Eq '^mavenCentralAutomaticPublishing=true$' "$build_dir/gradle.properties"; then
+            echo 'Automatic Central publication is forbidden' >&2
+            exit 1
+          fi
+          grep -Fq 'publishToMavenCentral()' "$build_dir/gradle/publishing.gradle"
+          if grep -Eq 'publishToMavenCentral\(true\)|publishAndReleaseToMavenCentral' "$build_dir/gradle/publishing.gradle"; then
+            echo 'Automatic Central publication is forbidden' >&2
+            exit 1
+          fi
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v6.0.1
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Gradle 8.14.5
+        uses: gradle/actions/setup-gradle@v6.3.0
+        with:
+          gradle-version: '8.14.5'
+          cache-provider: basic
+
+      - name: Run full checks
+        working-directory: build/backfill-6.0.3
+        run: ./gradlew clean check --no-daemon --no-build-cache
+
+      - name: Publish unsigned artifacts to isolated Maven local
+        working-directory: build/backfill-6.0.3
+        run: ./gradlew publishToMavenLocal -PunsignedLocalProof=true "-Dmaven.repo.local=$RUNNER_TEMP/backfill-6.0.3-maven" --no-daemon --no-build-cache
+
+      - name: Inspect 6.0.3 publication
+        run: |
+          python3 -I - <<'PY'
+          import json
+          import os
+          import struct
+          import xml.etree.ElementTree as ET
+          import zipfile
+          from pathlib import Path
+
+          base = 'kotest-allure-6.0.3'
+          repo = Path(os.environ['RUNNER_TEMP']) / 'backfill-6.0.3-maven' / 'ru/iopump/kotest/kotest-allure/6.0.3'
+          pom = repo / f'{base}.pom'
+          assert pom.is_file() and pom.stat().st_size > 0, 'Missing local POM'
+          root = ET.parse(pom).getroot()
+          def field(node, key):
+              return next((child.text for child in node if child.tag.rsplit('}', 1)[-1] == key), None)
+          assert (field(root, 'groupId'), field(root, 'artifactId'), field(root, 'version')) == ('ru.iopump.kotest', 'kotest-allure', '6.0.3'), 'Wrong publication coordinates'
+          dependencies = {
+              (field(node, 'groupId'), field(node, 'artifactId')): field(node, 'version')
+              for node in root.iter() if node.tag.rsplit('}', 1)[-1] == 'dependency'
+          }
+          assert dependencies.get(('io.kotest', 'kotest-framework-engine-jvm')) == '6.0.3', 'Wrong Kotest dependency'
+          assert dependencies.get(('io.qameta.allure', 'allure-java-commons')) == '2.30.0', 'Wrong Allure dependency'
+          assert any(
+              (field(node, 'groupId'), field(node, 'artifactId'), field(node, 'version')) == ('org.jetbrains.kotlin', 'kotlin-stdlib-jdk8', '2.2.10')
+              for node in root.iter() if node.tag.rsplit('}', 1)[-1] == 'dependency'
+          ), 'Wrong Kotlin dependency management'
+          module_path = repo / f'{base}.module'
+          assert module_path.is_file() and module_path.stat().st_size > 0, 'Missing Gradle metadata'
+          module = json.loads(module_path.read_text())
+          component = module.get('component', {})
+          assert tuple(component.get(key) for key in ('group', 'module', 'version')) == ('ru.iopump.kotest', 'kotest-allure', '6.0.3'), 'Wrong Gradle metadata coordinates'
+          assert module.get('variants'), 'Missing Gradle variants'
+
+          jars = [repo / f'{base}{suffix}.jar' for suffix in ('', '-sources', '-javadoc')]
+          for jar in jars:
+              assert jar.is_file() and jar.stat().st_size > 0, f'Missing {jar.name}'
+              with zipfile.ZipFile(jar) as archive:
+                  assert archive.testzip() is None, f'Corrupt {jar.name}'
+                  assert archive.namelist(), f'Empty {jar.name}'
+          with zipfile.ZipFile(jars[0]) as binary:
+              classes = [name for name in binary.namelist() if name.endswith('.class')]
+              assert 'ru/iopump/kotest/allure/KotestAllureListener.class' in classes, 'Missing listener class'
+              assert all(struct.unpack('>H', binary.read(name)[6:8])[0] == 55 for name in classes), 'Bytecode is not Java 11'
+          with zipfile.ZipFile(jars[1]) as sources:
+              assert any(name.endswith('.kt') for name in sources.namelist()), 'Missing Kotlin sources'
+          print(f'Verified 6.0.3 POM, module metadata, three JARs, and {len(classes)} Java 11 classes')
+          PY
+
+      - name: Sign verified publication
+        working-directory: build/backfill-6.0.3
+        env:
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.GPG_SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.GPG_SIGNING_PASSWORD }}
+        run: ./gradlew signMavenPublication --no-daemon --no-build-cache
+
+      - name: Verify signatures before upload
+        working-directory: build/backfill-6.0.3
+        run: |
+          set -euo pipefail
+          for suffix in '' -sources -javadoc; do
+            test -s "build/libs/kotest-allure-6.0.3${suffix}.jar.asc"
+          done
+          test -s build/publications/maven/pom-default.xml.asc
+          test -s build/publications/maven/module.json.asc
+
+      - name: Confirm 6.0.3 is still absent from public Central
+        run: |
+          set -euo pipefail
+          pom_url=https://repo.maven.apache.org/maven2/ru/iopump/kotest/kotest-allure/6.0.3/kotest-allure-6.0.3.pom
+          status=$(curl --silent --show-error --location --retry 2 --max-time 30 --output /dev/null --write-out '%{http_code}' "$pom_url")
+          if [[ "$status" != 404 ]]; then
+            echo "Central 6.0.3 POM must be absent before upload; HTTP $status" >&2
+            exit 1
+          fi
+
+      - name: Upload for manual Central Portal validation and publication
+        working-directory: build/backfill-6.0.3
+        env:
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.GPG_SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.GPG_SIGNING_PASSWORD }}
+        run: ./gradlew publishToMavenCentral --no-daemon --no-build-cache
